@@ -57,14 +57,7 @@ impl BitfieldStruct {
             impl ::modular_bitfield::Specifier for #ident {
                 const BITS: usize = #bits;
 
-                // `#bits` may contain 'unused' braces because the same
-                // generator is used at multiple different sites and some of
-                // them require those 'unused' braces for the emitted code to
-                // be well-formed. It is easier to suppress the lint here than
-                // it is to modify the generator to conditionally avoid adding
-                // the extra braces.
-                #[allow(unused_braces)]
-                type Bytes = <[(); if { #bits } > 128 { 128 } else { #bits }] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
+                type Bytes = <[(); if #bits > 128 { 128 } else { #bits }] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
                 type InOut = Self;
 
                 #[inline]
@@ -172,8 +165,7 @@ impl BitfieldStruct {
     /// Which is a compile time evaluatable expression.
     fn generate_bitfield_size(&self) -> TokenStream2 {
         let span = self.item_struct.span();
-        let sum = self
-            .item_struct
+        self.item_struct
             .fields
             .iter()
             .map(|field| {
@@ -187,10 +179,7 @@ impl BitfieldStruct {
                 quote_spanned!(span =>
                     #lhs + #rhs
                 )
-            });
-        quote_spanned!(span=>
-            { #sum }
-        )
+            })
     }
 
     /// Generates the expression denoting the actual configured or implied bit width.
@@ -254,7 +243,7 @@ impl BitfieldStruct {
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl ::modular_bitfield::private::checks::#check_ident for #ident {
-                    type Size = ::modular_bitfield::private::checks::TotalSize<[(); #actual_bits % 8usize]>;
+                    type Size = ::modular_bitfield::private::checks::TotalSize<[(); (#actual_bits) % 8usize]>;
                 }
             };
         )
@@ -280,9 +269,9 @@ impl BitfieldStruct {
     /// Returns a token stream representing the next greater value divisible by 8.
     fn next_divisible_by_8(value: &TokenStream2) -> TokenStream2 {
         let span = value.span();
-        quote_spanned!(span=> {
+        quote_spanned!(span=>
             (((#value - 1) / 8) + 1) * 8
-        })
+        )
     }
 
     /// Generates the actual item struct definition for the `#[bitfield]`.
@@ -367,13 +356,6 @@ impl BitfieldStruct {
                 ReprKind::U128 => quote! { IsU128Compatible },
             };
             quote_spanned!(span=>
-                // `#actual_bits` may contain 'unused' braces because the same
-                // generator is used at multiple different sites and some of
-                // them require those 'unused' braces for the emitted code to
-                // be well-formed. It is easier to suppress the lint here than
-                // it is to modify the generator to conditionally avoid adding
-                // the extra braces.
-                #[allow(unused_braces)]
                 #[allow(clippy::identity_op)]
                 impl ::core::convert::From<#prim> for #ident
                 where
@@ -385,7 +367,6 @@ impl BitfieldStruct {
                     }
                 }
 
-                #[allow(unused_braces)]
                 #[allow(clippy::identity_op)]
                 impl ::core::convert::From<#ident> for #prim
                 where
@@ -429,7 +410,7 @@ impl BitfieldStruct {
                     pub fn from_bytes(
                         bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]
                     ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
-                        if bytes[(#next_divisible_by_8 / 8usize) - 1] as ::core::primitive::u16 >= (0x01 << (8 - (#next_divisible_by_8 - #size))) {
+                        if bytes[(#next_divisible_by_8 / 8usize) - 1] as ::core::primitive::u16 >= (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
                             return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
                         }
                         ::core::result::Result::Ok(Self { bytes })
