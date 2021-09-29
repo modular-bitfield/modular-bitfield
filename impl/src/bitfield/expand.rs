@@ -379,6 +379,7 @@ impl BitfieldStruct {
                 // it is to modify the generator to conditionally avoid adding
                 // the extra braces.
                 #[allow(unused_braces)]
+                #[allow(clippy::identity_op)]
                 impl ::core::convert::From<#prim> for #ident
                 where
                     [(); #actual_bits]: ::modular_bitfield::private::#trait_check_ident,
@@ -390,6 +391,7 @@ impl BitfieldStruct {
                 }
 
                 #[allow(unused_braces)]
+                #[allow(clippy::identity_op)]
                 impl ::core::convert::From<#ident> for #prim
                 where
                     [(); #actual_bits]: ::modular_bitfield::private::#trait_check_ident,
