@@ -2,7 +2,7 @@
 
 #[cfg(all(test, not(miri)))]
 #[test]
-fn ui() {
+fn ui_trybuild() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/ui/**/*.rs");
 }

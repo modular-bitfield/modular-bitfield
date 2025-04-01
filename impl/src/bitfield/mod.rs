@@ -24,8 +24,8 @@ pub fn analyse_and_expand(args: TokenStream2, input: TokenStream2) -> TokenStrea
 ///
 /// If the given token stream does not yield a valid `#[bitfield]` specifier.
 fn analyse_and_expand_or_error(args: TokenStream2, input: TokenStream2) -> Result<TokenStream2> {
-    let input = syn::parse::<syn::ItemStruct>(input.into())?;
-    let params = syn::parse::<ParamArgs>(args.into())?;
+    let input = syn::parse2::<syn::ItemStruct>(input)?;
+    let params = syn::parse2::<ParamArgs>(args)?;
     let mut config = Config::default();
     config.feed_params(params)?;
     let bitfield = BitfieldStruct::try_from((&mut config, input))?;

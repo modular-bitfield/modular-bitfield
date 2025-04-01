@@ -11,19 +11,6 @@ where
 }
 
 /// The parameters given to the `#[bitfield]` proc. macro.
-///
-/// # Example
-///
-/// ```rust
-/// # use modular_bitfield::prelude::*;
-/// #
-/// #[bitfield(bytes = 4, filled = true)]
-/// #[derive(BitfieldSpecifier)]
-/// pub struct SignedInteger {
-///     sign: bool,
-///     value: B31,
-/// }
-/// ```
 pub struct ParamArgs {
     args: Vec<syn::MetaNameValue>,
 }

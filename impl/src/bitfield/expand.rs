@@ -147,8 +147,7 @@ impl BitfieldStruct {
     ///
     /// For the following struct:
     ///
-    /// ```
-    /// # use modular_bitfield::prelude::*;
+    /// ```no_compile
     /// #[bitfield]
     /// pub struct Color {
     ///     r: B8,
@@ -161,17 +160,13 @@ impl BitfieldStruct {
     ///
     /// We generate the following tokens:
     ///
-    /// ```
-    /// # use modular_bitfield::prelude::*;
-    /// {
-    ///     0usize +
-    ///     <B8 as ::modular_bitfield::Specifier>::BITS +
-    ///     <B8 as ::modular_bitfield::Specifier>::BITS +
-    ///     <B8 as ::modular_bitfield::Specifier>::BITS +
-    ///     <bool as ::modular_bitfield::Specifier>::BITS +
-    ///     <B7 as ::modular_bitfield::Specifier>::BITS
-    /// }
-    /// # ;
+    /// ```no_compile
+    /// 0usize +
+    /// <B8 as ::modular_bitfield::Specifier>::BITS +
+    /// <B8 as ::modular_bitfield::Specifier>::BITS +
+    /// <B8 as ::modular_bitfield::Specifier>::BITS +
+    /// <bool as ::modular_bitfield::Specifier>::BITS +
+    /// <B7 as ::modular_bitfield::Specifier>::BITS
     /// ```
     ///
     /// Which is a compile time evaluatable expression.

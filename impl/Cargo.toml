@@ -17,3 +17,10 @@ proc-macro = true
 quote = "1"
 syn = { version = "2", features = ["full"] }
 proc-macro2 = "1"
+
+[dev-dependencies]
+glob = "0.3"
+runtime-macros = "1.1.1"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }

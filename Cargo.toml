@@ -2,6 +2,7 @@
 members = [
     "impl"
 ]
+default-members = ["", "impl"]
 resolver = "2"
 
 [workspace.package]
@@ -11,7 +12,7 @@ license = "MIT OR Apache-2.0"
 publish = false # Use `release.sh`
 documentation = "https://docs.rs/modular-bitfield"
 repository = "https://github.com/Robbepop/modular-bitfield"
-rust-version = "1.66.0"
+rust-version = "1.70.0"
 version = "0.12.0-pre"
 
 [package]
@@ -37,6 +38,9 @@ static_assertions = "1.1"
 bitfield = "0.19"
 tiny-bench = "0.4"
 trybuild = "1.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
 
 [[bench]]
 name = "benchmarks"

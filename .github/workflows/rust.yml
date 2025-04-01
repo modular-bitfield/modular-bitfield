@@ -11,26 +11,111 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Test
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Use cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: stable
+          save-if: false
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
       - name: Check formatting
         run: cargo fmt -- --check
       - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
-      - name: Build workspace
-        run: cargo build
-      # Testing is separated just to more clearly differentiate in the CI
-      # whether the build failed or a test failed
-      - name: Run tests
-        run: cargo test
       - name: Build documentation
-        run: cargo rustdoc --lib -- -D warnings
+        run: cargo rustdoc -- -D warnings
+
+  test:
+    name: Test on Rust ${{ matrix.rust.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - name: stable
+            components: clippy, rustfmt, llvm-tools-preview
+          - name: nightly
+          - name: "1.70" # rust-version, msrv
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      # Using env.HOME or $HOME does not work in the rust-cache workflow step,
+      # so just build the path this way.
+      - name: Find toolchain path
+        id: toolchain_path
+        run: echo "path=$HOME/.rustup/toolchains/${{ matrix.rust.name }}-x86_64-unknown-linux-gnu" >> $GITHUB_OUTPUT
+        # Stable toolchain for Rust is already built into the runner image so
+        # only other versions need caching to avoid wasting time and bandwidth
+        # re-downloading them.
+        if: matrix.rust.name != 'stable'
+      - name: Use cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.rust.name }}
+          cache-on-failure: true
+          cache-directories: ${{ steps.toolchain_path.outputs.path }}
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust.name }}
+          components: ${{ matrix.rust.components }}
+      # Building is separated from testing just to more clearly differentiate in
+      # the CI whether the build failed or a test failed
+      - name: Build workspace
+        run: cargo build --lib --tests
+      - name: Run tests
+        # UI tests are compiler-version-sensitive so can only run on one
+        # toolchain
+        run: cargo test ${{ matrix.rust.name != 'stable' && '-- --skip ui_trybuild' || '' }}
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Use cache
+        uses: Swatinem/rust-cache@v2
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy, rustfmt, llvm-tools-preview
+      - name: Install llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      # UI tests do not contribute to coverage since trybuild builds them
+      # independently so they do not get instrumented (even though llvm-cov
+      # tries?), so skip them. They will get passed through runtime-macros
+      # instead
+      - name: Generate coverage data
+        run: cargo llvm-cov test --no-report -- --skip ui_trybuild
+      - name: Show coverage results
+        run: >
+          cargo llvm-cov report
+          --ignore-filename-regex 'benches|tests'
+      # https://github.com/actions/runner/issues/520
+      - name: Determine whether codecov.io secret is available
+        id: has_codecov
+        run: echo 'result=${{ secrets.CODECOV_TOKEN }}' >> $GITHUB_OUTPUT
+      - name: Generate coverage file
+        run: >
+          cargo llvm-cov report
+          --ignore-filename-regex 'benches|tests'
+          --lcov --output-path lcov.info
+        if: steps.has_codecov.outputs.result != 0
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: steps.has_codecov.outputs.result != 0

@@ -10,7 +10,7 @@ pub fn generate(input: TokenStream2) -> TokenStream2 {
 }
 
 fn generate_or_error(input: TokenStream2) -> syn::Result<TokenStream2> {
-    let input = syn::parse::<syn::DeriveInput>(input.into())?;
+    let input = syn::parse2::<syn::DeriveInput>(input)?;
     match input.data {
         syn::Data::Enum(data_enum) => generate_enum(syn::ItemEnum {
             attrs: input.attrs,
