@@ -23,13 +23,13 @@ fn print_invalid_bits() {
         is_received: bool,
     }
 
-    let package = DataPackage::from_bytes([0b01011011]);
+    let package = DataPackage::from_bytes([0b0101_1011]);
     assert_eq!(
-        format!("{:?}", package),
+        format!("{package:?}"),
         "DataPackage { status: InvalidBitPattern { invalid_bytes: 3 }, contents: 6, is_alive: true, is_received: false }",
     );
     assert_eq!(
-        format!("{:#X?}", package),
+        format!("{package:#X?}"),
         "DataPackage {\n    \
             status: InvalidBitPattern {\n        \
                 invalid_bytes: 0x3,\n    \
@@ -55,12 +55,9 @@ fn respects_other_derives() {
     let color1 = Color::new().with_r(63).with_g(32).with_b(16).with_a(8);
     let color2 = color1.clone();
     assert_eq!(color1, color2);
+    assert_eq!(format!("{color1:?}"), "Color { r: 63, g: 32, b: 16, a: 8 }",);
     assert_eq!(
-        format!("{:?}", color1),
-        "Color { r: 63, g: 32, b: 16, a: 8 }",
-    );
-    assert_eq!(
-        format!("{:#x?}", color2),
+        format!("{color2:#x?}"),
         "Color {\n    r: 0x3f,\n    g: 0x20,\n    b: 0x10,\n    a: 0x8,\n}",
     );
 }
@@ -90,11 +87,11 @@ fn valid_use_2() {
         .with_is_alive(true)
         .with_is_received(false);
     assert_eq!(
-        format!("{:?}", package),
+        format!("{package:?}"),
         "DataPackage { status: Green, contents: 3235826430, is_alive: true, is_received: false }",
     );
     assert_eq!(
-        format!("{:#X?}", package),
+        format!("{package:#X?}"),
         "DataPackage {\n    status: Green,\n    contents: 0xC0DECAFE,\n    is_alive: true,\n    is_received: false,\n}",
     );
 }
@@ -114,11 +111,11 @@ fn valid_use_specifier() {
         .with_is_alive(true)
         .with_is_received(false);
     assert_eq!(
-        format!("{:?}", header),
+        format!("{header:?}"),
         "Header { status: 1, is_alive: true, is_received: false }",
     );
     assert_eq!(
-        format!("{:#X?}", header),
+        format!("{header:#X?}"),
         "Header {\n    status: 0x1,\n    is_alive: true,\n    is_received: false,\n}",
     );
 }
@@ -135,12 +132,9 @@ fn valid_use() {
     }
 
     let color = Color::new().with_r(63).with_g(32).with_b(16).with_a(8);
+    assert_eq!(format!("{color:?}"), "Color { r: 63, g: 32, b: 16, a: 8 }",);
     assert_eq!(
-        format!("{:?}", color),
-        "Color { r: 63, g: 32, b: 16, a: 8 }",
-    );
-    assert_eq!(
-        format!("{:#x?}", color),
+        format!("{color:#x?}"),
         "Color {\n    r: 0x3f,\n    g: 0x20,\n    b: 0x10,\n    a: 0x8,\n}",
     );
 }

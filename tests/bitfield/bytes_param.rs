@@ -13,7 +13,7 @@ fn valid_bitfield() {
         d: u16,
     }
 
-    assert_eq!(core::mem::size_of::<Base>(), 4)
+    assert_eq!(core::mem::size_of::<Base>(), 4);
 }
 
 #[test]
@@ -28,5 +28,5 @@ fn valid_specifier_bitfield() {
         d: bool,
     }
 
-    assert_eq!(core::mem::size_of::<Header>(), 2)
+    assert_eq!(core::mem::size_of::<Header>(), 2);
 }

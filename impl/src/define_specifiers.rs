@@ -17,11 +17,11 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
         65..=128 => quote! { ::core::primitive::u128 },
         _ => unreachable!(),
     };
-    let ident = format_ident!("B{}", bits);
+    let ident = format_ident!("B{bits}");
     let doc_comment = if bits == 1 {
         "Specifier for a single bit.".to_string()
     } else {
-        format!("Specifier for {} bits.", bits)
+        format!("Specifier for {bits} bits.")
     };
     let max_value = if bits.is_power_of_two() && bits >= 8 {
         // The compiler can eliminate a check against `x > MAX` entirely

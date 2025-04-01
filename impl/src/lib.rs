@@ -1,7 +1,6 @@
 #![recursion_limit = "256"]
 #![forbid(unsafe_code)]
-
-extern crate proc_macro;
+#![warn(clippy::pedantic, rust_2018_idioms)]
 
 #[macro_use]
 mod errors;

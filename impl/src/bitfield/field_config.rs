@@ -71,7 +71,7 @@ impl FieldConfig {
                 self.bits = Some(ConfigValue {
                     value: amount,
                     span,
-                })
+                });
             }
         }
         Ok(())
@@ -140,17 +140,13 @@ impl FieldConfig {
     pub fn skip_setters(&self) -> bool {
         self.skip
             .as_ref()
-            .map(|config| config.value)
-            .map(SkipWhich::skip_setters)
-            .unwrap_or(false)
+            .is_some_and(|config| SkipWhich::skip_setters(config.value))
     }
 
     /// Returns `true` if the config demands that code generation for getters should be skipped.
     pub fn skip_getters(&self) -> bool {
         self.skip
             .as_ref()
-            .map(|config| config.value)
-            .map(SkipWhich::skip_getters)
-            .unwrap_or(false)
+            .is_some_and(|config| SkipWhich::skip_getters(config.value))
     }
 }

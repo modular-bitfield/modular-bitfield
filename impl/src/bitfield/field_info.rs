@@ -38,8 +38,7 @@ impl<'a> FieldInfo<'a> {
         field
             .ident
             .as_ref()
-            .map(ToString::to_string)
-            .unwrap_or_else(|| format!("{}", index))
+            .map_or_else(|| format!("{index}"), ToString::to_string)
     }
 }
 

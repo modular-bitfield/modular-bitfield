@@ -35,6 +35,8 @@ fn accessors() {
 }
 
 #[test]
+// Bad names are fine, it is just a test
+#[allow(clippy::many_single_char_names)]
 fn accessor_signatures() {
     use core::mem::size_of_val;
 

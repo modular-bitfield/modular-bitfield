@@ -183,11 +183,11 @@ fn skip_with_debug() {
 
     let sparse = Sparse::new().with_a(true).with_b(false);
     assert_eq!(
-        format!("{:?}", sparse),
+        format!("{sparse:?}"),
         "Sparse { a: true, no_setters: 0, b: false }",
     );
     assert_eq!(
-        format!("{:#X?}", sparse),
+        format!("{sparse:#X?}"),
         "Sparse {\n    a: true,\n    no_setters: 0x0,\n    b: false,\n}",
     );
 }

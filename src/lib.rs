@@ -417,8 +417,7 @@
 
 #![no_std]
 #![forbid(unsafe_code)]
-
-extern crate static_assertions;
+#![warn(clippy::pedantic, missing_docs, rust_2018_idioms)]
 
 pub mod error;
 #[doc(hidden)]

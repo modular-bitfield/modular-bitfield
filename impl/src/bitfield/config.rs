@@ -49,7 +49,7 @@ impl ReprKind {
 }
 
 impl core::fmt::Debug for ReprKind {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "#[repr(u{})]", self.bits())
     }
 }
@@ -73,10 +73,7 @@ impl<T> ConfigValue<T> {
 impl Config {
     /// Returns the value of the `filled` parameter if provided and otherwise `true`.
     pub fn filled_enabled(&self) -> bool {
-        self.filled
-            .as_ref()
-            .map(|config| config.value)
-            .unwrap_or(true)
+        self.filled.as_ref().map_or(true, |config| config.value)
     }
 
     fn ensure_no_bits_and_repr_conflict(&self) -> Result<()> {

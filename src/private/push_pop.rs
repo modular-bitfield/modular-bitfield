@@ -21,7 +21,9 @@ impl PopBits for PopBuffer<u8> {
         let Self { bytes } = self;
         let orig_ones = bytes.count_ones();
         debug_assert!((1..=8).contains(&amount));
-        let res = *bytes & ((0x01_u16.wrapping_shl(amount)).wrapping_sub(1) as u8);
+        // Truncation is always valid due to shift range
+        #[allow(clippy::cast_possible_truncation)]
+        let res = *bytes & (0x01_u16.wrapping_shl(amount).wrapping_sub(1) as u8);
         *bytes = bytes.checked_shr(amount).unwrap_or(0);
         debug_assert_eq!(res.count_ones() + bytes.count_ones(), orig_ones);
         res
@@ -40,7 +42,9 @@ macro_rules! impl_pop_bits {
                     let orig_ones = bytes.count_ones();
                     debug_assert!((1..=8).contains(&amount));
                     let bitmask = 0xFF >> (8 - amount);
-                    let res = (*bytes & bitmask) as u8;
+                    // Truncation is always valid due to mask size
+                    #[allow(clippy::cast_possible_truncation)]
+                    let res = (*bytes as u8) & bitmask;
                     *bytes = bytes.checked_shr(amount).unwrap_or(0);
                     debug_assert_eq!(res.count_ones() + bytes.count_ones(), orig_ones);
                     res
@@ -82,8 +86,8 @@ macro_rules! impl_push_bits {
                     let Self { bytes } = self;
                     let orig_ones = bytes.count_ones();
                     debug_assert!((1..=8).contains(&amount));
-                    let bitmask = 0xFF >> (8 - amount as u8);
-                    *bytes = bytes.wrapping_shl(amount) | ((bits & bitmask) as $type);
+                    let bitmask = 0xFF >> (8 - amount);
+                    *bytes = bytes.wrapping_shl(amount) | <$type>::from(bits & bitmask);
                     debug_assert_eq!((bits & bitmask).count_ones() + orig_ones, bytes.count_ones());
                 }
             }

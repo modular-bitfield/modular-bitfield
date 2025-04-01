@@ -10,7 +10,7 @@ impl Specifier for bool {
 
     #[inline]
     fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds> {
-        Ok(input as u8)
+        Ok(input.into())
     }
 
     #[inline]

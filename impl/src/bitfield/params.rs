@@ -2,21 +2,13 @@ use super::config::Config;
 use proc_macro2::Span;
 use syn::{parse::Result, spanned::Spanned};
 
-/// Raises an unsupported argument compile time error.
-fn unsupported_argument<T>(arg: T) -> syn::Error
-where
-    T: Spanned,
-{
-    format_err!(arg, "encountered unsupported #[bitfield] attribute")
-}
-
 /// The parameters given to the `#[bitfield]` proc. macro.
 pub struct ParamArgs {
     args: Vec<syn::MetaNameValue>,
 }
 
 impl syn::parse::Parse for ParamArgs {
-    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+    fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
         let punctuated = <syn::punctuated::Punctuated<_, syn::Token![,]>>::parse_terminated(input)?;
         Ok(Self {
             args: punctuated.into_iter().collect(),
@@ -35,7 +27,7 @@ impl IntoIterator for ParamArgs {
 
 impl Config {
     /// Feeds a parameter that takes an integer value to the `#[bitfield]` configuration.
-    fn feed_int_param<F>(name_value: syn::MetaNameValue, name: &str, on_success: F) -> Result<()>
+    fn feed_int_param<F>(name_value: &syn::MetaNameValue, name: &str, on_success: F) -> Result<()>
     where
         F: FnOnce(usize, Span) -> Result<()>,
     {
@@ -68,17 +60,17 @@ impl Config {
     }
 
     /// Feeds a `bytes: int` parameter to the `#[bitfield]` configuration.
-    fn feed_bytes_param(&mut self, name_value: syn::MetaNameValue) -> Result<()> {
+    fn feed_bytes_param(&mut self, name_value: &syn::MetaNameValue) -> Result<()> {
         Self::feed_int_param(name_value, "bytes", |value, span| self.bytes(value, span))
     }
 
     /// Feeds a `bytes: int` parameter to the `#[bitfield]` configuration.
-    fn feed_bits_param(&mut self, name_value: syn::MetaNameValue) -> Result<()> {
+    fn feed_bits_param(&mut self, name_value: &syn::MetaNameValue) -> Result<()> {
         Self::feed_int_param(name_value, "bits", |value, span| self.bits(value, span))
     }
 
     /// Feeds a `filled: bool` parameter to the `#[bitfield]` configuration.
-    fn feed_filled_param(&mut self, name_value: syn::MetaNameValue) -> Result<()> {
+    fn feed_filled_param(&mut self, name_value: &syn::MetaNameValue) -> Result<()> {
         assert!(name_value.path.is_ident("filled"));
         match &name_value.value {
             syn::Expr::Lit(syn::ExprLit {
@@ -108,13 +100,16 @@ impl Config {
     {
         for name_value in params {
             if name_value.path.is_ident("bytes") {
-                self.feed_bytes_param(name_value)?;
+                self.feed_bytes_param(&name_value)?;
             } else if name_value.path.is_ident("bits") {
-                self.feed_bits_param(name_value)?;
+                self.feed_bits_param(&name_value)?;
             } else if name_value.path.is_ident("filled") {
-                self.feed_filled_param(name_value)?;
+                self.feed_filled_param(&name_value)?;
             } else {
-                return Err(unsupported_argument(name_value));
+                return Err(format_err!(
+                    name_value,
+                    "encountered unsupported #[bitfield] attribute"
+                ));
             }
         }
         Ok(())

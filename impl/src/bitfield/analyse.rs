@@ -225,7 +225,7 @@ impl BitfieldStruct {
                             config.skip(SkipWhich::Setters, meta_list.path.span())?;
                         }
                     }
-                    meta => {
+                    meta @ syn::Meta::NameValue(..) => {
                         return Err(format_err!(
                             meta.span(),
                             "encountered invalid format for #[skip] field attribute"
