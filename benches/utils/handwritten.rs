@@ -11,8 +11,6 @@
 //! and to eventually come up with new optimization tricks
 //! for the macro generated code while staying correct.
 
-#![allow(dead_code)]
-
 use modular_bitfield::prelude::*;
 
 /// This generates code by the macros that we are going to test.
@@ -117,7 +115,7 @@ impl Handwritten {
     /// Sets the value of `e`.
     pub fn set_e(&mut self, new_val: u8) {
         assert!(new_val < (0x01 << 3));
-        self.data[3] = (self.data[3] & 0b1110_0000) | ((new_val & 0b0000_0111) << 5)
+        self.data[3] = (self.data[3] & !0b1110_0000) | ((new_val & 0b0000_0111) << 5)
     }
 
     /// Returns the value of `f`.
@@ -135,6 +133,7 @@ impl Handwritten {
 
 macro_rules! impl_getter_setter_tests {
     ( $( ($name:ident, $getter:ident, $setter:ident, $n:expr), )* ) => {
+        #[cfg(test)]
         mod generated_is_equal_to_handwritten {
             $(
                 #[test]

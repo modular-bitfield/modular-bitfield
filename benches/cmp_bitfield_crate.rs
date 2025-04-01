@@ -4,31 +4,11 @@
 //! We want to find out which crate produces the more efficient code for different
 //! use cases and scenarios.
 
-mod handwritten;
 mod utils;
 
 use bitfield::bitfield as bitfield_crate;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use modular_bitfield::prelude::*;
-use utils::repeat;
-
-criterion_group!(
-    bench_get,
-    bench_get_a,
-    bench_get_b,
-    bench_get_c,
-    bench_get_d,
-    bench_get_e
-);
-criterion_group!(
-    bench_set,
-    bench_set_a,
-    bench_set_b,
-    bench_set_c,
-    bench_set_d,
-    bench_set_e
-);
-criterion_main!(bench_get, bench_set);
+use utils::*;
 
 bitfield_crate! {
     pub struct OtherBitfield(u32);
@@ -61,78 +41,83 @@ macro_rules! generate_cmp_benchmark_for {
             fn $fn_set:ident($name_set:literal);
         }
     ) => {
-        fn $test_name_get(c: &mut Criterion) {
-            let mut g = c.benchmark_group($name_get);
-            g.bench_function("other_bitfield", |b| {
-                let input = black_box(OtherBitfield(0x00));
-                assert_eq!(input.$fn_get(), 0);
-                b.iter(|| {
+        fn $test_name_get() {
+            println!();
+            compare(
+                $name_get,
+                || OtherBitfield(0),
+                |input| {
                     repeat(|| {
                         black_box(input.$fn_get());
-                    })
-                });
-            });
-            g.bench_function("modular_bitfield", |b| {
-                let input = ModularBitfield::new();
-                assert_eq!(input.$fn_get(), 0);
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(input.$fn_get());
-                    })
+                    });
+                },
+            );
+            compare($name_get, &ModularBitfield::new, |input| {
+                repeat(|| {
+                    black_box(input.$fn_get());
                 });
             });
         }
 
-        fn $test_name_set(c: &mut Criterion) {
-            let mut g = c.benchmark_group($name_set);
-            g.bench_function("other_bitfield", |b| {
-                let mut input = OtherBitfield(0x00);
-                b.iter(|| {
+        fn $test_name_set() {
+            println!();
+            compare(
+                $name_set,
+                || OtherBitfield(0),
+                |mut input| {
                     repeat(|| {
                         black_box(black_box(&mut input).$fn_set(1));
-                    })
+                    });
+                },
+            );
+            compare($name_set, &ModularBitfield::new, |mut input| {
+                repeat(|| {
+                    black_box(black_box(&mut input).$fn_set(1));
                 });
-                assert_eq!(input.$fn_get(), 1);
-            });
-            g.bench_function("modular_bitfield", |b| {
-                let mut input = ModularBitfield::new();
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(black_box(&mut input).$fn_set(1));
-                    })
-                });
-                assert_eq!(input.$fn_get(), 1);
             });
         }
     };
 }
 generate_cmp_benchmark_for!(
     test(bench_get_a, bench_set_a) {
-        fn a("compare_crates/get_a");
-        fn set_a("compare_crates/set_a");
+        fn a("bitfield vs modular-bitfield - get_a");
+        fn set_a("bitfield vs modular-bitfield - set_a");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_b, bench_set_b) {
-        fn b("compare_crates/get_b");
-        fn set_b("compare_crates/set_b");
+        fn b("bitfield vs modular-bitfield - get_b");
+        fn set_b("bitfield vs modular-bitfield - set_b");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_c, bench_set_c) {
-        fn c("compare_crates/get_c");
-        fn set_c("compare_crates/set_c");
+        fn c("bitfield vs modular-bitfield - get_c");
+        fn set_c("bitfield vs modular-bitfield - set_c");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_d, bench_set_d) {
-        fn d("compare_crates/get_d");
-        fn set_d("compare_crates/set_d");
+        fn d("bitfield vs modular-bitfield - get_d");
+        fn set_d("bitfield vs modular-bitfield - set_d");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_e, bench_set_e) {
-        fn e("compare_crates/get_e");
-        fn set_e("compare_crates/set_e");
+        fn e("bitfield vs modular-bitfield - get_e");
+        fn set_e("bitfield vs modular-bitfield - set_e");
     }
 );
+
+fn main() {
+    bench_get_a();
+    bench_get_b();
+    bench_get_c();
+    bench_get_d();
+    bench_get_e();
+    bench_set_a();
+    bench_set_b();
+    bench_set_c();
+    bench_set_d();
+    bench_set_e();
+}

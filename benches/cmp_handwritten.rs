@@ -11,32 +11,12 @@
 //! and to eventually come up with new optimization tricks
 //! for the macro generated code while staying correct.
 
-mod handwritten;
 mod utils;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use handwritten::{Generated, Handwritten};
-use utils::repeat;
-
-criterion_group!(
-    bench_get,
-    bench_get_a,
-    bench_get_b,
-    bench_get_c,
-    bench_get_d,
-    bench_get_e,
-    bench_get_f,
-);
-criterion_group!(
-    bench_set,
-    bench_set_a,
-    bench_set_b,
-    bench_set_c,
-    bench_set_d,
-    bench_set_e,
-    bench_set_f,
-);
-criterion_main!(bench_get, bench_set);
+use utils::{
+    handwritten::{Generated, Handwritten},
+    *,
+};
 
 macro_rules! generate_cmp_benchmark_for {
     (
@@ -45,42 +25,30 @@ macro_rules! generate_cmp_benchmark_for {
             fn $fn_set:ident($name_set:literal);
         }
     ) => {
-        fn $test_name_get(c: &mut Criterion) {
-            let mut g = c.benchmark_group($name_get);
-            g.bench_function("generated", |b| {
-                let input = black_box(Generated::new());
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(input.$fn_get());
-                    })
+        fn $test_name_get() {
+            println!();
+            compare($name_get, &Generated::new, |input| {
+                repeat(|| {
+                    black_box(input.$fn_get());
                 });
             });
-            g.bench_function("handwritten", |b| {
-                let input = Handwritten::new();
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(input.$fn_get());
-                    })
+            compare($name_get, &Handwritten::new, |input| {
+                repeat(|| {
+                    black_box(input.$fn_get());
                 });
             });
         }
 
-        fn $test_name_set(c: &mut Criterion) {
-            let mut g = c.benchmark_group($name_set);
-            g.bench_function("generated", |b| {
-                let mut input = Generated::new();
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(black_box(&mut input).$fn_set(1));
-                    })
+        fn $test_name_set() {
+            println!();
+            compare($name_set, &Generated::new, |mut input| {
+                repeat(|| {
+                    black_box(black_box(&mut input).$fn_set(1));
                 });
             });
-            g.bench_function("handwritten", |b| {
-                let mut input = Handwritten::new();
-                b.iter(|| {
-                    repeat(|| {
-                        black_box(black_box(&mut input).$fn_set(1));
-                    })
+            compare($name_set, &Handwritten::new, |mut input| {
+                repeat(|| {
+                    black_box(black_box(&mut input).$fn_set(1));
                 });
             });
         }
@@ -88,37 +56,52 @@ macro_rules! generate_cmp_benchmark_for {
 }
 generate_cmp_benchmark_for!(
     test(bench_get_a, bench_set_a) {
-        fn a("generated_vs_handwritten/get_a");
-        fn set_a("generated_vs_handwritten/set_a");
+        fn a("handwritten vs modular-bitfield - get_a");
+        fn set_a("handwritten vs modular-bitfield - set_a");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_b, bench_set_b) {
-        fn b("generated_vs_handwritten/get_b");
-        fn set_b("generated_vs_handwritten/set_b");
+        fn b("handwritten vs modular-bitfield - get_b");
+        fn set_b("handwritten vs modular-bitfield - set_b");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_c, bench_set_c) {
-        fn c("generated_vs_handwritten/get_c");
-        fn set_c("generated_vs_handwritten/set_c");
+        fn c("handwritten vs modular-bitfield - get_c");
+        fn set_c("handwritten vs modular-bitfield - set_c");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_d, bench_set_d) {
-        fn d("generated_vs_handwritten/get_d");
-        fn set_d("generated_vs_handwritten/set_d");
+        fn d("handwritten vs modular-bitfield - get_d");
+        fn set_d("handwritten vs modular-bitfield - set_d");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_e, bench_set_e) {
-        fn e("generated_vs_handwritten/get_e");
-        fn set_e("generated_vs_handwritten/set_e");
+        fn e("handwritten vs modular-bitfield - get_e");
+        fn set_e("handwritten vs modular-bitfield - set_e");
     }
 );
 generate_cmp_benchmark_for!(
     test(bench_get_f, bench_set_f) {
-        fn f("generated_vs_handwritten/get_f");
-        fn set_f("generated_vs_handwritten/set_f");
+        fn f("handwritten vs modular-bitfield - get_f");
+        fn set_f("handwritten vs modular-bitfield - set_f");
     }
 );
+
+fn main() {
+    bench_get_a();
+    bench_get_b();
+    bench_get_c();
+    bench_get_d();
+    bench_get_e();
+    bench_get_f();
+    bench_set_a();
+    bench_set_b();
+    bench_set_c();
+    bench_set_d();
+    bench_set_e();
+    bench_set_f();
+}

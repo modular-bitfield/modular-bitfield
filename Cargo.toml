@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 publish = false # Use `release.sh`
 documentation = "https://docs.rs/modular-bitfield"
 repository = "https://github.com/Robbepop/modular-bitfield"
-rust-version = "1.56.0"
+rust-version = "1.66.0"
 version = "0.12.0-pre"
 
 [package]
@@ -34,37 +34,25 @@ modular-bitfield-impl = { path = "impl", version = "0.12.0-pre" }
 static_assertions = "1.1"
 
 [dev-dependencies]
-# To run benchmarks, these packages need to be present, but until
-# <https://github.com/rust-lang/cargo/issues/1596> is fixed, there is no way to
-# have conditional dev-dependencies. Criterion is a fat dependency with its own
-# fat dependencies and this causes dev builds to take longer than they need to.
-# Until the benches can be rewritten to use libtest or similar just disable
-# building these crates, since they are practically never used. (Using a regular
-# conditional feature would work, but that would cause this feature and these
-# packages to show up as optional runtime dependencies, which they never
-# actually are.)
-# bitfield = "0.19"
-# criterion = "0.5"
+bitfield = "0.19"
+tiny-bench = "0.4"
 trybuild = "1.0"
 
 [[bench]]
 name = "benchmarks"
-path = "benches/benchmarks.rs"
 harness = false
 
 [[bench]]
 name = "cmp_handwritten"
-path = "benches/cmp_handwritten.rs"
 harness = false
 
 [[bench]]
 name = "cmp_bitfield_crate"
-path = "benches/cmp_bitfield_crate.rs"
 harness = false
 
-[[bin]]
-name = "playground"
-path = "playground.rs"
+[[test]]
+name = "benches_handwritten"
+path = "benches/utils/handwritten.rs"
 
 [profile.bench]
 codegen-units = 1
