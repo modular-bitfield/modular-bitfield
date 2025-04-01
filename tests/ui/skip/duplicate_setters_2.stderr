@@ -1,0 +1,11 @@
+error: encountered duplicate `#[skip(setters)]` attribute for field
+ --> tests/ui/skip/duplicate_setters_2.rs:5:15
+  |
+5 |     #[skip] #[skip(setters)]
+  |               ^^^^
+
+error: duplicate `#[skip(setters)]` here
+ --> tests/ui/skip/duplicate_setters_2.rs:5:7
+  |
+5 |     #[skip] #[skip(setters)]
+  |       ^^^^

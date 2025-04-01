@@ -1,0 +1,11 @@
+error: encountered duplicate `#[derive(BitfieldSpecifier)]` parameter
+ --> tests/ui/derive_specifier/duplicate_derive_1.rs:4:29
+  |
+4 | #[derive(BitfieldSpecifier, BitfieldSpecifier)]
+  |                             ^^^^^^^^^^^^^^^^^
+
+error: previous `#[derive(BitfieldSpecifier)]` parameter here
+ --> tests/ui/derive_specifier/duplicate_derive_1.rs:4:10
+  |
+4 | #[derive(BitfieldSpecifier, BitfieldSpecifier)]
+  |          ^^^^^^^^^^^^^^^^^

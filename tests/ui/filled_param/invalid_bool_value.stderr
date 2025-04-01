@@ -1,0 +1,5 @@
+error: encountered invalid value argument for #[bitfield] `filled` parameter
+ --> tests/ui/filled_param/invalid_bool_value.rs:4:21
+  |
+4 | #[bitfield(filled = "yes")]
+  |                     ^^^^^

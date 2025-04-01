@@ -1,0 +1,5 @@
+error: encountered unknown or unsupported #[skip(..)] specifier
+ --> tests/ui/skip/invalid_specifier.rs:5:12
+  |
+5 |     #[skip(invalid_specifier)]
+  |            ^^^^^^^^^^^^^^^^^

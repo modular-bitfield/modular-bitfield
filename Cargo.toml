@@ -12,16 +12,10 @@ description = "Allows to easily define bitfield types with modular building bloc
 categories = ["data-structures", "no-std"]
 keywords   = ["bitfield", "bit", "bitfields"]
 
-autotests = false
-
 [dev-dependencies]
 trybuild = "1.0"
 criterion = "0.5"
 bitfield = "0.19"
-
-[[test]]
-name = "tests"
-path = "tests/progress.rs"
 
 [[bench]]
 name = "benchmarks"

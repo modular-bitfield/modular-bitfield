@@ -1,5 +1,0 @@
-error: unions are not supported as bitfield specifiers
- --> $DIR/27-invalid-union-specifier.rs:4:1
-  |
-4 | pub union InvalidUnionSpecifier {
-  | ^^^

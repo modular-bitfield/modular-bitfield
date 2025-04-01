@@ -1,5 +1,0 @@
-error[E0692]: transparent struct cannot have other repr hints
- --> $DIR/conflicting-ignored-reprs.rs:4:8
-  |
-4 | #[repr(C, transparent, u32)] // The macro simply ignores `repr(C)` and `repr(transparent)`
-  |        ^  ^^^^^^^^^^^

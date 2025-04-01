@@ -1,0 +1,5 @@
+error: encountered invalid value argument for #[bitfield] `bytes` parameter
+ --> tests/ui/bytes_param/invalid_type.rs:4:20
+  |
+4 | #[bitfield(bytes = true)]
+  |                    ^^^^

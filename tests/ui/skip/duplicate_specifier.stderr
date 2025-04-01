@@ -1,0 +1,11 @@
+error: encountered duplicate #[skip(getters)]
+ --> tests/ui/skip/duplicate_specifier.rs:5:21
+  |
+5 |     #[skip(getters, getters)]
+  |                     ^^^^^^^
+
+error: previous found here
+ --> tests/ui/skip/duplicate_specifier.rs:5:12
+  |
+5 |     #[skip(getters, getters)]
+  |            ^^^^^^^

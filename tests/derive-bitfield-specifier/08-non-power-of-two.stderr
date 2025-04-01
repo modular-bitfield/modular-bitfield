@@ -1,5 +1,0 @@
-error: BitfieldSpecifier expected a number of variants which is a power of 2, specify #[bits = 2] if that was your intent
-  --> $DIR/08-non-power-of-two.rs:11:1
-   |
-11 | pub enum Bad {
-   | ^^^

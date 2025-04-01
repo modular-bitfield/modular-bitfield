@@ -1,9 +1,0 @@
-error[E0599]: no method named `unused_1` found for struct `Sparse` in the current scope
-  --> tests/skip/use-skipped-getter-3.rs:13:23
-   |
-4  | / #[derive(Debug)]
-5  | | pub struct Sparse {
-   | |___- method `unused_1` not found for this struct
-...
-13 |       assert_eq!(sparse.unused_1(), 0xFE); // ERROR!
-   |                         ^^^^^^^^ method not found in `Sparse`

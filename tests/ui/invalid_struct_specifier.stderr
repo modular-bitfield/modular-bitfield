@@ -1,0 +1,5 @@
+error: structs are not supported as bitfield specifiers
+ --> tests/ui/invalid_struct_specifier.rs:4:1
+  |
+4 | pub struct InvalidStructSpecifier {
+  | ^^^

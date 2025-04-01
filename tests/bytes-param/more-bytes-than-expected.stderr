@@ -1,9 +1,0 @@
-error[E0512]: cannot transmute between types of different sizes, or dependently-sized types
- --> tests/bytes-param/more-bytes-than-expected.rs:4:12
-  |
-4 | #[bitfield(bytes = 4)]
-  |            ^^^^^
-  |
-  = note: source type: `ExpectedBytes` (32 bits)
-  = note: target type: `Base` (48 bits)
-  = note: this error originates in the macro `::modular_bitfield::private::static_assertions::assert_eq_size` (in Nightly builds, run with -Z macro-backtrace for more info)

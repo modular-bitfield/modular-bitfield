@@ -1,0 +1,19 @@
+error: encountered conflicting `bits = 16` and `bytes = 4` parameters
+ --> tests/ui/bits_param/conflicting_params.rs:3:1
+  |
+3 | #[bitfield(bits = 16, bytes = 4)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `bitfield` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: conflicting `bits = 16` here
+ --> tests/ui/bits_param/conflicting_params.rs:3:12
+  |
+3 | #[bitfield(bits = 16, bytes = 4)]
+  |            ^^^^
+
+error: conflicting `bytes = 4` here
+ --> tests/ui/bits_param/conflicting_params.rs:3:23
+  |
+3 | #[bitfield(bits = 16, bytes = 4)]
+  |                       ^^^^^

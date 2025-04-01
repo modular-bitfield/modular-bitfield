@@ -1,0 +1,11 @@
+error: encountered duplicate `bits` parameter: duplicate set to 32
+ --> tests/ui/bits_param/duplicate_param_2.rs:3:23
+  |
+3 | #[bitfield(bits = 32, bits = 16)]
+  |                       ^^^^
+
+error: previous `bits` parameter here
+ --> tests/ui/bits_param/duplicate_param_2.rs:3:12
+  |
+3 | #[bitfield(bits = 32, bits = 16)]
+  |            ^^^^

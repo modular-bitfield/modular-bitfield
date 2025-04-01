@@ -1,7 +1,0 @@
-error[E0552]: unrecognized representation hint
- --> tests/repr/invalid-repr-2.rs:4:24
-  |
-4 | #[cfg_attr(all(), repr(invalid))]
-  |                        ^^^^^^^
-  |
-  = help: valid reprs are `Rust` (default), `C`, `align`, `packed`, `transparent`, `simd`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `i128`, `u128`, `isize`, `usize`

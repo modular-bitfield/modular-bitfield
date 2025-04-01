@@ -1,0 +1,11 @@
+error: encountered duplicate `bytes` parameter: duplicate set to 4
+ --> tests/ui/bytes_param/duplicate_parameters.rs:4:23
+  |
+4 | #[bitfield(bytes = 4, bytes = 4)]
+  |                       ^^^^^
+
+error: previous `bytes` parameter here
+ --> tests/ui/bytes_param/duplicate_parameters.rs:4:12
+  |
+4 | #[bitfield(bytes = 4, bytes = 4)]
+  |            ^^^^^

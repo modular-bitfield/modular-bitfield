@@ -1,0 +1,8 @@
+error[E0624]: method `a` is private
+  --> tests/ui/access_test.rs:14:15
+   |
+6  |         a: B5,
+   |         - private method defined here
+...
+14 |     let _ = c.a();
+   |               ^ private method

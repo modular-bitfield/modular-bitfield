@@ -1,5 +1,0 @@
-error: structs are not supported as bitfield specifiers
- --> $DIR/26-invalid-struct-specifier.rs:4:1
-  |
-4 | pub struct InvalidStructSpecifier {
-  | ^^^

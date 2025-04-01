@@ -1,5 +1,0 @@
-error: encountered invalid value argument for #[bitfield] `filled` parameter
- --> $DIR/invalid-bool-value.rs:4:21
-  |
-4 | #[bitfield(filled = "yes")]
-  |                     ^^^^^

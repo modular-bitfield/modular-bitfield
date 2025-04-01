@@ -1,5 +1,0 @@
-error: encountered malformatted integer value for `bits` parameter: invalid digit found in string
- --> $DIR/invalid-param-value-2.rs:3:19
-  |
-3 | #[bitfield(bits = -1)]
-  |                   ^

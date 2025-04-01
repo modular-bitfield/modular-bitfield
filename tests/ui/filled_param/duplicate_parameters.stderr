@@ -1,0 +1,11 @@
+error: encountered duplicate `filled` parameter: duplicate set to true
+ --> tests/ui/filled_param/duplicate_parameters.rs:4:27
+  |
+4 | #[bitfield(filled = true, filled = true)]
+  |                           ^^^^^^
+
+error: previous `filled` parameter here
+ --> tests/ui/filled_param/duplicate_parameters.rs:4:12
+  |
+4 | #[bitfield(filled = true, filled = true)]
+  |            ^^^^^^
