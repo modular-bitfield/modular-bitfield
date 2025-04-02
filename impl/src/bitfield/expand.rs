@@ -311,6 +311,7 @@ impl BitfieldStruct {
                 /// Returns an instance with zero initialized data.
                 #[allow(clippy::identity_op)]
                 #[allow(clippy::new_without_default)]
+                #[must_use]
                 pub const fn new() -> Self {
                     Self {
                         bytes: [0u8; #next_divisible_by_8 / 8usize],
@@ -396,6 +397,7 @@ impl BitfieldStruct {
                 /// Converts the given bytes directly into the bitfield struct.
                 #[inline]
                 #[allow(clippy::identity_op)]
+                #[must_use]
                 pub const fn from_bytes(bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]) -> Self {
                     Self { bytes }
                 }
@@ -508,6 +510,7 @@ impl BitfieldStruct {
         let getters = quote_spanned!(span=>
             #[doc = #getter_docs]
             #[inline]
+            #[must_use]
             #( #retained_attrs )*
             #vis fn #get_ident(&self) -> <#ty as ::modular_bitfield::Specifier>::InOut {
                 self.#get_checked_ident().expect(#get_assert_msg)
@@ -586,6 +589,7 @@ impl BitfieldStruct {
             #[doc = #with_docs]
             #[inline]
             #[allow(dead_code)]
+            #[must_use]
             #( #retained_attrs )*
             #vis fn #with_ident(
                 mut self,
