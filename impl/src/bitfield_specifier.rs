@@ -126,17 +126,17 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
             type InOut = Self;
 
             #[inline]
-            fn into_bytes(input: Self::InOut) -> ::core::result::Result<Self::Bytes, ::modular_bitfield::error::OutOfBounds> {
-                ::core::result::Result::Ok(input as Self::Bytes)
+            fn into_bytes(input: <Self as ::modular_bitfield::Specifier>::InOut) -> ::core::result::Result<<Self as ::modular_bitfield::Specifier>::Bytes, ::modular_bitfield::error::OutOfBounds> {
+                ::core::result::Result::Ok(input as <Self as ::modular_bitfield::Specifier>::Bytes)
             }
 
             #[inline]
-            fn from_bytes(bytes: Self::Bytes) -> ::core::result::Result<Self::InOut, ::modular_bitfield::error::InvalidBitPattern<Self::Bytes>> {
+            fn from_bytes(bytes: <Self as ::modular_bitfield::Specifier>::Bytes) -> ::core::result::Result<<Self as ::modular_bitfield::Specifier>::InOut, ::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>> {
                 match bytes {
                     #( #from_bytes_arms ),*
                     invalid_bytes => {
                         ::core::result::Result::Err(
-                            <::modular_bitfield::error::InvalidBitPattern<Self::Bytes>>::new(invalid_bytes)
+                            <::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>>::new(invalid_bytes)
                         )
                     }
                 }

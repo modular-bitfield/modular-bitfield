@@ -113,6 +113,15 @@ fn enums() {
     assert_eq!(entry.small_prime_or_err(), Ok(SmallPrime::Five));
 }
 
+#[test]
+fn name_conflict() {
+    #[derive(BitfieldSpecifier)]
+    pub enum SuspiciouslyAmbiguous {
+        Bytes,
+        InOut,
+    }
+}
+
 // For bitfield use limited to a single binary, such as a space optimization for
 // some in-memory data structure, we may not care what exact bit representation
 // is used for enums.
