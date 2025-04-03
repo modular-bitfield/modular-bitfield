@@ -62,10 +62,17 @@ fn no_dead_code() {
         f: u8,
     }
 
+    #[bitfield(skip(from_bytes, into_bytes))]
+    struct E {
+        f: u8,
+        _g: u8,
+    }
+
     let _ = A::new().f();
     let _ = B::from_bytes([0u8; 1]).f();
     let _ = C::new().f();
     let _ = D::from(0).f();
+    let _ = E::new().f();
 }
 
 #[test]

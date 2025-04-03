@@ -81,3 +81,21 @@ error: duplicate `#[skip(from_bytes)]` here
    |
 38 | #[bitfield(skip(convert, from_bytes, into_bytes))]
    |                 ^^^^^^^
+
+error[E0599]: no method named `implicit_skip` found for struct `I` in the current scope
+  --> tests/ui/skip/skip_struct.rs:50:7
+   |
+44 | struct I {
+   | ------ method `implicit_skip` not found for this struct
+...
+50 |     i.implicit_skip();
+   |       ^^^^^^^^^^^^^ method not found in `I`
+
+error[E0599]: no method named `_implicit_skip` found for struct `I` in the current scope
+  --> tests/ui/skip/skip_struct.rs:51:7
+   |
+44 | struct I {
+   | ------ method `_implicit_skip` not found for this struct
+...
+51 |     i._implicit_skip();
+   |       ^^^^^^^^^^^^^^ method not found in `I`

@@ -40,4 +40,13 @@ struct H {
     f: u8,
 }
 
-fn main() {}
+#[bitfield]
+struct I {
+    _implicit_skip: u8,
+}
+
+fn main() {
+    let i = I::new();
+    i.implicit_skip();
+    i._implicit_skip();
+}
