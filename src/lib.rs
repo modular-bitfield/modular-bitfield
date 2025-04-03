@@ -1,7 +1,7 @@
 //! Provides macros to support bitfield structs allowing for modular use of bit-enums.
 //!
-//! The mainly provided macros are `#[bitfield]` for structs and
-//! `#[derive(BitfieldSpecifier)]` for enums that shall be usable
+//! The mainly provided macros are [`#[bitfield]`](bitfield) for structs and
+//! [`#[derive(BitfieldSpecifier)]`](BitfieldSpecifier) for enums that shall be usable
 //! within bitfield structs.
 //!
 //! There are preset bitfield specifiers such as `B1`, `B2`,..,`B64`
@@ -15,7 +15,8 @@
 //!
 //! ### Usage
 //!
-//! Annotate a Rust struct with the `#[bitfield]` attribute in order to convert it into a bitfield.
+//! Annotate a Rust struct with the [`#[bitfield]`](bitfield) attribute in order to convert it into a bitfield,
+//! with [optional parameters](bitfield#parameters) that control how the bitfield is generated.
 //! The `B1`, `B2`, ... `B128` prelude types can be used as primitives to declare the number of bits per field.
 //!
 //! ```
