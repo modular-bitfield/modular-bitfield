@@ -510,3 +510,11 @@ fn single_bit_enum() {
     let entry = UselessStruct::new().with_field(ForciblyTrue::True);
     assert_eq!(entry.field_or_err(), Ok(ForciblyTrue::True));
 }
+
+#[test]
+fn generic() {
+    #[bitfield]
+    struct Generic<const N: u8> {
+        v: u8,
+    }
+}

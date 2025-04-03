@@ -1,0 +1,5 @@
+error: bitfield structs can only use const generics
+ --> tests/ui/generic.rs:4:15
+  |
+4 | struct Generic<T> {
+  |               ^^^

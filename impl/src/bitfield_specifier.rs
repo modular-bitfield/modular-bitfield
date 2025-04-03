@@ -68,6 +68,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     let span = input.span();
     let attributes = parse_attrs(&input.attrs)?;
     let enum_ident = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let bits = if let Some(bits) = attributes.bits {
         bits
@@ -103,7 +104,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     let check_discriminants = variants.iter().map(|ident| {
         let span = ident.span();
         quote_spanned!(span =>
-            impl ::modular_bitfield::private::checks::CheckDiscriminantInRange<[(); Self::#ident as usize]> for #enum_ident {
+            impl #impl_generics ::modular_bitfield::private::checks::CheckDiscriminantInRange<[(); Self::#ident as usize]> for #enum_ident #ty_generics #where_clause {
                 type CheckType = [(); ((Self::#ident as usize) < (0x01_usize << #bits)) as usize ];
             }
         )
@@ -120,7 +121,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     Ok(quote_spanned!(span=>
         #( #check_discriminants )*
 
-        impl ::modular_bitfield::Specifier for #enum_ident {
+        impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
             const BITS: usize = #bits;
             type Bytes = <[(); #bits] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
             type InOut = Self;

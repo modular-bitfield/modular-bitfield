@@ -14,7 +14,7 @@ impl TryFrom<(&mut Config, syn::ItemStruct)> for BitfieldStruct {
 
     fn try_from((config, item_struct): (&mut Config, syn::ItemStruct)) -> Result<Self> {
         Self::ensure_has_fields(&item_struct)?;
-        Self::ensure_no_generics(&item_struct)?;
+        Self::ensure_valid_generics(&item_struct)?;
         Self::extract_attributes(&item_struct.attrs, config)?;
         Self::analyse_config_for_fields(&item_struct, config)?;
         config.ensure_no_conflicts()?;
@@ -37,12 +37,15 @@ impl BitfieldStruct {
         Ok(())
     }
 
-    /// Returns an error if the input struct is generic.
-    fn ensure_no_generics(item_struct: &syn::ItemStruct) -> Result<()> {
-        if !item_struct.generics.params.is_empty() {
+    /// Returns an error if the input struct contains generics that cannot be
+    /// used in a const expression.
+    fn ensure_valid_generics(item_struct: &syn::ItemStruct) -> Result<()> {
+        if item_struct.generics.type_params().next().is_some()
+            || item_struct.generics.lifetimes().next().is_some()
+        {
             return Err(format_err_spanned!(
-                item_struct,
-                "encountered invalid generic bitfield struct"
+                item_struct.generics,
+                "bitfield structs can only use const generics"
             ));
         }
         Ok(())
