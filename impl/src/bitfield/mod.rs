@@ -7,7 +7,7 @@ mod params;
 
 use self::{config::Config, params::ParamArgs};
 use core::convert::TryFrom;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{self, parse::Result};
 
 /// Analyzes the given token stream for `#[bitfield]` properties and expands code if valid.
@@ -36,4 +36,15 @@ fn analyse_and_expand_or_error(args: TokenStream2, input: TokenStream2) -> Resul
 struct BitfieldStruct {
     /// The input `struct` item.
     item_struct: syn::ItemStruct,
+}
+
+fn raise_skip_error(skip_params: &str, span: Span, previous: Span) -> Result<()> {
+    Err(crate::errors::CombineError::into_combine(
+        format_err!(
+            span,
+            "encountered duplicate `#[skip{}]` attribute for field",
+            skip_params
+        ),
+        format_err!(previous, "duplicate `#[skip{}]` here", skip_params),
+    ))
 }

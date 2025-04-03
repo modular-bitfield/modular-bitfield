@@ -1,9 +1,8 @@
 use super::{
     config::{Config, ReprKind},
     field_config::{FieldConfig, SkipWhich},
-    BitfieldStruct,
+    raise_skip_error, BitfieldStruct,
 };
-use crate::errors::CombineError;
 use core::convert::TryFrom;
 use quote::quote;
 use std::collections::HashMap;
@@ -195,23 +194,13 @@ impl BitfieldStruct {
                                 if let Some(previous) =
                                     which.insert(SkipWhich::Getters, path.span())
                                 {
-                                    return Err(meta
-                                        .error("encountered duplicate #[skip(getters)]")
-                                        .into_combine(format_err!(
-                                            previous,
-                                            "previous found here"
-                                        )));
+                                    return raise_skip_error("(getters)", path.span(), previous);
                                 }
                             } else if path.is_ident("setters") {
                                 if let Some(previous) =
                                     which.insert(SkipWhich::Setters, path.span())
                                 {
-                                    return Err(meta
-                                        .error("encountered duplicate #[skip(setters)]")
-                                        .into_combine(format_err!(
-                                            previous,
-                                            "previous found here"
-                                        )));
+                                    return raise_skip_error("(setters)", path.span(), previous);
                                 }
                             } else {
                                 return Err(meta.error(

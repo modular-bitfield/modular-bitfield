@@ -1,4 +1,4 @@
-use super::config::ConfigValue;
+use super::{config::ConfigValue, raise_skip_error};
 use crate::errors::CombineError;
 use proc_macro2::Span;
 
@@ -93,36 +93,20 @@ impl FieldConfig {
     /// E.g. when skipping getters or setters twice. Note that skipping getters followed
     /// by skipping setters is fine.
     pub fn skip(&mut self, which: SkipWhich, span: Span) -> Result<(), syn::Error> {
-        fn raise_skip_error(
-            skip_params: &str,
-            span: Span,
-            previous: &ConfigValue<SkipWhich>,
-        ) -> syn::Error {
-            format_err!(
-                span,
-                "encountered duplicate `#[skip{}]` attribute for field",
-                skip_params
-            )
-            .into_combine(format_err!(
-                previous.span,
-                "duplicate `#[skip{}]` here",
-                skip_params
-            ))
-        }
         match self.skip {
             Some(ref previous) => {
                 match which {
-                    SkipWhich::All => return Err(raise_skip_error("", span, previous)),
+                    SkipWhich::All => return raise_skip_error("", span, previous.span),
                     SkipWhich::Getters => {
                         if previous.value == SkipWhich::Getters || previous.value == SkipWhich::All
                         {
-                            return Err(raise_skip_error("(getters)", span, previous));
+                            return raise_skip_error("(getters)", span, previous.span);
                         }
                     }
                     SkipWhich::Setters => {
                         if previous.value == SkipWhich::Setters || previous.value == SkipWhich::All
                         {
-                            return Err(raise_skip_error("(setters)", span, previous));
+                            return raise_skip_error("(setters)", span, previous.span);
                         }
                     }
                 }

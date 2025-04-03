@@ -1,10 +1,10 @@
-error: encountered duplicate #[skip(getters)]
+error: encountered duplicate `#[skip(getters)]` attribute for field
  --> tests/ui/skip/duplicate_specifier.rs:5:21
   |
 5 |     #[skip(getters, getters)]
   |                     ^^^^^^^
 
-error: previous found here
+error: duplicate `#[skip(getters)]` here
  --> tests/ui/skip/duplicate_specifier.rs:5:12
   |
 5 |     #[skip(getters, getters)]
