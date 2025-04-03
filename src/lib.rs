@@ -367,6 +367,9 @@
 //! | `fn with_a(self, new_value: bool) -> Self` | Similar to `set_a` but useful for method chaining. |
 //! | `fn with_a_checked(self, new_value: bool) -> Result<Self, OutOfBounds>` | Similar to `set_a_checked` but useful for method chaining. |
 //!
+//! Getters for unnamed fields in tuple-like structs are prefixed with `get_`
+//! (e.g. `get_0()`, `get_1_or_err()`, etc.).
+//!
 //! ## Generated Structure
 //!
 //! From David Tolnay's procedural macro workshop:
