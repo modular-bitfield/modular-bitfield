@@ -25,9 +25,12 @@ impl TryFrom<(&mut Config, syn::ItemStruct)> for BitfieldStruct {
 impl BitfieldStruct {
     /// Returns an error if the input struct does not have any fields.
     fn ensure_has_fields(item_struct: &syn::ItemStruct) -> Result<()> {
-        if let unit @ syn::Fields::Unit = &item_struct.fields {
+        if matches!(&item_struct.fields, syn::Fields::Unit)
+            || matches!(&item_struct.fields, syn::Fields::Unnamed(f) if f.unnamed.is_empty())
+            || matches!(&item_struct.fields, syn::Fields::Named(f) if f.named.is_empty())
+        {
             return Err(format_err_spanned!(
-                unit,
+                item_struct,
                 "encountered invalid bitfield struct without fields"
             ));
         }

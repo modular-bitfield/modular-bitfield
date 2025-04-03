@@ -1,0 +1,17 @@
+error: encountered invalid bitfield struct without fields
+ --> tests/ui/empty.rs:4:1
+  |
+4 | struct Unit;
+  | ^^^^^^^^^^^^
+
+error: encountered invalid bitfield struct without fields
+ --> tests/ui/empty.rs:7:1
+  |
+7 | struct Named {}
+  | ^^^^^^^^^^^^^^^
+
+error: encountered invalid bitfield struct without fields
+  --> tests/ui/empty.rs:10:1
+   |
+10 | struct Unnamed();
+   | ^^^^^^^^^^^^^^^^^
