@@ -107,7 +107,7 @@ impl BitfieldStruct {
                 // Other derives are going to be re-expanded them into a new
                 // `#[derive(..)]` that is ignored by the rest of this macro.
                 retained_derives.push(path.clone());
-            };
+            }
             Ok(())
         })?;
         if !retained_derives.is_empty() {

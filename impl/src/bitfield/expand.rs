@@ -256,11 +256,11 @@ impl BitfieldStruct {
     /// Generate check for either of the following two cases:
     ///
     /// - `filled = true`: Check if the total number of required bits is
-    ///         - ... the same as `N` if `bits = N` was provided or
-    ///         - ... a multiple of 8, otherwise
+    ///   - ... the same as `N` if `bits = N` was provided or
+    ///   - ... a multiple of 8, otherwise
     /// - `filled = false`: Check if the total number of required bits is
-    ///         - ... smaller than `N` if `bits = N` was provided or
-    ///         - ... NOT a multiple of 8, otherwise
+    ///   - ... smaller than `N` if `bits = N` was provided or
+    ///   - ... NOT a multiple of 8, otherwise
     fn generate_check_for_filled(&self, config: &Config) -> TokenStream2 {
         match config.bits.as_ref() {
             Some(bits_config) => {
