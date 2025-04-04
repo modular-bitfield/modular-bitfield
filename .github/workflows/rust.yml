@@ -1,4 +1,4 @@
-name: Rust - Continuous Integration
+name: Rust CI
 
 on:
   pull_request:
