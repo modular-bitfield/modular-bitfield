@@ -36,17 +36,28 @@ impl BitfieldStruct {
     }
 
     /// Expands to the `Specifier` impl for the `#[bitfield]` struct if the
-    /// `#[derive(BitfieldSpecifier)]` attribute is applied to it as well.
+    /// `#[derive(Specifier)]` attribute is applied to it as well.
     ///
     /// Otherwise returns `None`.
     pub fn generate_specifier_impl(&self, config: &Config) -> Option<TokenStream2> {
         config.derive_specifier.as_ref()?;
+
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let bits = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&bits);
-        Some(quote_spanned!(span =>
+
+        let deprecation_warning = config.deprecated_specifier.map(|span| {
+            quote_spanned!(span=> const _: () = {
+                #[derive(::modular_bitfield::BitfieldSpecifier)]
+                enum #ident { A = 0, B = 1 }
+            };)
+        });
+
+        Some(quote_spanned!(span=>
+            #deprecation_warning
+
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::CheckSpecifierHasAtMost128Bits for #ident #ty_generics #where_clause {

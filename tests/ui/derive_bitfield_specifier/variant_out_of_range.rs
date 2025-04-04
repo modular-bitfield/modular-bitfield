@@ -5,7 +5,7 @@ use modular_bitfield::prelude::*;
 
 const F: isize = 1;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub enum DeliveryMode {
     Fixed = F,
     Lowest,

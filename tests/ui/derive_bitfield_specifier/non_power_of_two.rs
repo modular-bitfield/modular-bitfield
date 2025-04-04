@@ -7,7 +7,7 @@
 
 use modular_bitfield::prelude::*;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub enum Bad {
     Zero,
     One,

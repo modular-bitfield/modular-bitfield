@@ -1,7 +1,7 @@
 Provides macros to support bitfield structs allowing for modular use of bit-enums.
 
 The mainly provided macros are [`#[bitfield]`](bitfield) for structs and
-[`#[derive(BitfieldSpecifier)]`](BitfieldSpecifier) for enums that shall be usable
+[`#[derive(Specifier)]`](Specifier) for enums that shall be usable
 within bitfield structs.
 
 There are preset bitfield specifiers such as `B1`, `B2`,..,`B64`
@@ -90,7 +90,7 @@ them also usable as a field within a bitfield type:
 ```
 # use modular_bitfield::prelude::*;
 #
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub enum Status {
     Red, Green, Yellow, None,
 }
@@ -112,7 +112,7 @@ In order to make sure that our `Status` enum still requires exatly 2 bit we can 
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # pub enum Status {
 #     Red, Green, Yellow, None,
 # }
@@ -132,7 +132,7 @@ Setting and getting our new `status` field is naturally as follows:
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # #[derive(Debug, PartialEq, Eq)]
 # pub enum Status {
 #     Red, Green, Yellow, None,
@@ -217,19 +217,19 @@ method is fallible since it must guard against those undefined bits.
 
 It is possible to use `#[bitfield]` structs as fields of `#[bitfield]` structs.
 This is generally useful if there are some common fields for multiple bitfields
-and is achieved by adding the `#[derive(BitfieldSpecifier)]` attribute to the struct
+and is achieved by adding the `#[derive(Specifier)]` attribute to the struct
 annotated with `#[bitfield]`:
 
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # pub enum Status {
 #     Red, Green, Yellow, None,
 # }
 #
 #[bitfield(filled = false)]
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub struct Header {
     is_compact: bool,
     is_secure: bool,
@@ -246,20 +246,20 @@ pub struct PackedData {
 ```
 
 With the `bits: int` parameter of the `#[bitfield]` macro on the `Header` struct and the
-`#[bits: int]` attribute of the `#[derive(BitfieldSpecifier)]` on the `Status` enum we
+`#[bits: int]` attribute of the `#[derive(Specifier)]` on the `Status` enum we
 can have additional compile-time guarantees about the bit widths of the resulting entities:
 
 ```
 # use modular_bitfield::prelude::*;
 #
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 2]
 pub enum Status {
     Red, Green, Yellow, None,
 }
 
 #[bitfield(bits = 4)]
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub struct Header {
     is_compact: bool,
     is_secure: bool,
@@ -289,7 +289,7 @@ the invariant of it requiring 2 bits:
 ```
 # use modular_bitfield::prelude::*;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 2]
 pub enum Status {
     Red, Green, Yellow,
@@ -305,7 +305,7 @@ construct bitfields that may contain invalid bit patterns:
 # use modular_bitfield::prelude::*;
 # use modular_bitfield::error::InvalidBitPattern;
 #
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # #[derive(Debug, PartialEq, Eq)]
 # #[bits = 2]
 # pub enum Status {
@@ -313,7 +313,7 @@ construct bitfields that may contain invalid bit patterns:
 # }
 #
 # #[bitfield(filled = false)]
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # pub struct Header {
 #     is_compact: bool,
 #     is_secure: bool,

@@ -1,4 +1,4 @@
-//! Tests specific to the `#[derive(BitfieldSpecifier)]` proc. macro
+//! Tests specific to the `#[derive(Specifier)]` proc. macro
 
 use modular_bitfield::prelude::*;
 
@@ -9,7 +9,7 @@ use modular_bitfield::prelude::*;
 //
 //     // Works like B3, but getter and setter signatures will use
 //     // the enum instead of u8.
-//     #[derive(BitfieldSpecifier)]
+//     #[derive(Specifier)]
 //     enum DeliveryMode {
 //         Fixed = 0b000,
 //         Lowest = 0b001,
@@ -29,7 +29,7 @@ use modular_bitfield::prelude::*;
 // have a number of variants that is not a power of two. If the #[bits = N]
 // attribute is specified, like so:
 //
-//     #[derive(BitfieldSpecifier)]
+//     #[derive(Specifier)]
 //     #[bits = 4]
 //     enum SmallPrime {
 //         Two = 0b0010,
@@ -61,13 +61,13 @@ fn enums() {
         another_small_prime: SmallPrime,
     }
 
-    #[derive(BitfieldSpecifier, Debug, PartialEq)]
+    #[derive(Specifier, Debug, PartialEq)]
     pub enum TriggerMode {
         Edge = 0,
         Level = 1,
     }
 
-    #[derive(BitfieldSpecifier, Debug, PartialEq)]
+    #[derive(Specifier, Debug, PartialEq)]
     pub enum DeliveryMode {
         Fixed = 0b000,
         Lowest = 0b001,
@@ -79,7 +79,7 @@ fn enums() {
         External = 0b111,
     }
 
-    #[derive(BitfieldSpecifier, Debug, PartialEq)]
+    #[derive(Specifier, Debug, PartialEq)]
     #[bits = 4]
     pub enum SmallPrime {
         Two = 0b0010,
@@ -115,7 +115,7 @@ fn enums() {
 
 #[test]
 fn name_conflict() {
-    #[derive(BitfieldSpecifier)]
+    #[derive(Specifier)]
     pub enum SuspiciouslyAmbiguous {
         Bytes,
         InOut,
@@ -126,7 +126,7 @@ fn name_conflict() {
 // some in-memory data structure, we may not care what exact bit representation
 // is used for enums.
 //
-// Make your BitfieldSpecifier derive macro for enums use the underlying
+// Make your Specifier derive macro for enums use the underlying
 // discriminant determined by the Rust compiler as the bit representation. Do
 // not assume that the compiler uses any particular scheme like PREV+1 for
 // implicit discriminants; make sure your implementation respects Rust's choice
@@ -148,7 +148,7 @@ fn optional_discriminant() {
     const F: isize = 3;
     const G: isize = 0;
 
-    #[derive(BitfieldSpecifier, Debug, PartialEq)]
+    #[derive(Specifier, Debug, PartialEq)]
     pub enum DeliveryMode {
         Fixed = F,
         Lowest,

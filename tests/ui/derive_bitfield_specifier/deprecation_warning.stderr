@@ -1,0 +1,23 @@
+error: use of deprecated macro `BitfieldSpecifier`: use #[derive(Specifier)]. This alias will be removed in 0.13.
+ --> tests/ui/derive_bitfield_specifier/deprecation_warning.rs:5:10
+  |
+5 | #[derive(BitfieldSpecifier)]
+  |          ^^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> tests/ui/derive_bitfield_specifier/deprecation_warning.rs:1:9
+  |
+1 | #![deny(deprecated)]
+  |         ^^^^^^^^^^
+
+error: use of deprecated macro `::modular_bitfield::BitfieldSpecifier`: use #[derive(Specifier)]. This alias will be removed in 0.13.
+  --> tests/ui/derive_bitfield_specifier/deprecation_warning.rs:12:10
+   |
+12 | #[derive(BitfieldSpecifier)]
+   |          ^^^^^^^^^^^^^^^^^
+
+error: use of deprecated macro `::modular_bitfield::BitfieldSpecifier`: use #[derive(Specifier)]. This alias will be removed in 0.13.
+  --> tests/ui/derive_bitfield_specifier/deprecation_warning.rs:18:10
+   |
+18 | #[derive(BitfieldSpecifier)]
+   |          ^^^^^^^^^^^^^^^^^

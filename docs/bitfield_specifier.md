@@ -5,7 +5,7 @@ The annotated enum must not have any variants with associated data and
 by default must have a number of variants that is equal to the power of 2.
 
 If a user wants to circumvent the latter restriction they can add
-`#[bits = N]` below the `#[derive(BitfieldSpecifier)]` line in order to
+`#[bits = N]` below the `#[derive(Specifier)]` line in order to
 signal to the code generation that the enum may have a relaxed number
 of variants.
 
@@ -19,7 +19,7 @@ as well as an invalid day so that we have a power-of-two number of variants.
 ```
 use modular_bitfield::prelude::*;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub enum Weekday {
     Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, None
 }
@@ -32,7 +32,7 @@ If we want to get rid of the `None` variant we need to add `#[bits = 3]`:
 ```
 # use modular_bitfield::prelude::*;
 #
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 3]
 pub enum Weekday {
     Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
@@ -47,7 +47,7 @@ In our case this is useful since our week starts at sunday:
 ```
 # use modular_bitfield::prelude::*;
 #
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 3]
 pub enum Weekday {
     Monday = 1,
@@ -68,7 +68,7 @@ we can now use it in a `#[bitfield]` annotated struct as follows:
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(BitfieldSpecifier)]
+# #[derive(Specifier)]
 # #[bits = 3]
 # pub enum Weekday {
 #     Monday = 1,
@@ -100,7 +100,7 @@ the following ways:
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(BitfieldSpecifier, Debug, PartialEq)]
+# #[derive(Specifier, Debug, PartialEq)]
 # #[bits = 3]
 # pub enum Weekday {
 #     Monday = 1,

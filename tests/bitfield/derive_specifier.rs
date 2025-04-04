@@ -1,11 +1,11 @@
-//! Tests for `#[derive(BitfieldSpecifier)]` using `#[bitfield]`
+//! Tests for `#[derive(Specifier)]` using `#[bitfield]`
 
 use modular_bitfield::prelude::*;
 
 #[test]
 fn struct_in_struct() {
     #[bitfield(filled = false)]
-    #[derive(BitfieldSpecifier, Debug, PartialEq, Eq, Copy, Clone)]
+    #[derive(Specifier, Debug, PartialEq, Eq, Copy, Clone)]
     pub struct Header {
         a: B2,
         b: B3,
@@ -33,7 +33,7 @@ fn unfilled_from_bytes() {
     use modular_bitfield::error::OutOfBounds;
 
     #[bitfield(filled = false)]
-    #[derive(BitfieldSpecifier, Debug, PartialEq, Eq, Copy, Clone)]
+    #[derive(Specifier, Debug, PartialEq, Eq, Copy, Clone)]
     pub struct Unfilled {
         a: B2,
     }
@@ -57,7 +57,7 @@ fn unfilled_from_bytes() {
 #[test]
 fn valid_use() {
     #[bitfield]
-    #[derive(BitfieldSpecifier)]
+    #[derive(Specifier)]
     pub struct Header {
         live: bool,
         received: bool,

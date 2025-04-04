@@ -1,6 +1,6 @@
 use modular_bitfield::prelude::*;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub struct InvalidStructSpecifier {
     a: bool,
     b: B7,

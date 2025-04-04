@@ -86,7 +86,7 @@ It is possible to derive the `Specifier` trait for `enum` types very easily to m
 them also usable as a field within a bitfield type:
 
 ```rust
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub enum Status {
     Red, Green, Yellow, None,
 }
@@ -130,12 +130,12 @@ assert_eq!(data.status(), Status::Red);
 
 It is possible to use `#[bitfield]` structs as fields of `#[bitfield]` structs.
 This is generally useful if there are some common fields for multiple bitfields
-and is achieved by adding `#[derive(BitfieldSpecifier)]` to the attributes of the
+and is achieved by adding `#[derive(Specifier)]` to the attributes of the
 `#[bitfield]` annotated struct:
 
 ```rust
 #[bitfield]
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub struct Header {
     is_compact: bool,
     is_secure: bool,
@@ -152,18 +152,18 @@ pub struct PackedData {
 ```
 
 With the `bits: int` parameter of the `#[bitfield]` macro on the `Header` struct and the
-`#[bits: int]` attribute of the `#[derive(BitfieldSpecifier)]` on the `Status` enum we
+`#[bits: int]` attribute of the `#[derive(Specifier)]` on the `Status` enum we
 can have additional compile-time guarantees about the bit widths of the resulting entities:
 
 ```rust
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 2]
 pub enum Status {
     Red, Green, Yellow
 }
 
 #[bitfield(bits = 4)]
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 pub struct Header {
     is_compact: bool,
     is_secure: bool,
@@ -193,7 +193,7 @@ the invariant of it requiring 2 bits:
 ```rust
 # use modular_bitfield::prelude::*;
 
-#[derive(BitfieldSpecifier)]
+#[derive(Specifier)]
 #[bits = 2]
 pub enum Status {
     Red, Green, Yellow,

@@ -1,7 +1,7 @@
 use modular_bitfield::prelude::*;
 
 #[bitfield(filled = false)]
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(Specifier, Debug)]
 pub struct Header {
     a: B1,
     b: B128,

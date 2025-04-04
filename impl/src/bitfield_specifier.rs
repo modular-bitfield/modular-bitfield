@@ -77,7 +77,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
         if !count_variants.is_power_of_two() {
             return Err(format_err!(
                 span,
-                "BitfieldSpecifier expected a number of variants which is a power of 2, specify #[bits = {}] if that was your intent",
+                "#[derive(Specifier)] expected a number of variants which is a power of 2, specify #[bits = {}] if that was your intent",
                 count_variants.next_power_of_two().trailing_zeros(),
             ));
         }
@@ -87,7 +87,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
         } else {
             return Err(format_err!(
                 span,
-                "BitfieldSpecifier has too many variants to pack into a bitfield",
+                "#[derive(Specifier)] has too many variants to pack into a bitfield",
             ));
         }
     };
