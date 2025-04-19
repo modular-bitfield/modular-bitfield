@@ -34,6 +34,40 @@ fn double_wildcards_2() {
     }
 }
 
+#[deny(dead_code)]
+#[test]
+fn no_dead_code() {
+    #[bitfield(skip(from_bytes, into_bytes))]
+    struct A {
+        #[skip(setters)]
+        f: u8,
+    }
+
+    #[bitfield(skip(new, into_bytes))]
+    struct B {
+        #[skip(setters)]
+        f: u8,
+    }
+
+    #[bitfield(skip(convert))]
+    #[derive(Specifier)]
+    struct C {
+        #[skip(setters)]
+        f: u8,
+    }
+
+    #[bitfield(skip(all))]
+    #[repr(u8)]
+    struct D {
+        f: u8,
+    }
+
+    let _ = A::new().f();
+    let _ = B::from_bytes([0u8; 1]).f();
+    let _ = C::new().f();
+    let _ = D::from(0).f();
+}
+
 #[test]
 fn skip_default() {
     #[bitfield]

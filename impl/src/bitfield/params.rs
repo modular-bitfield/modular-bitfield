@@ -1,10 +1,10 @@
-use super::config::Config;
+use super::config::{Config, SkipMethod};
 use proc_macro2::Span;
 use syn::{parse::Result, spanned::Spanned};
 
 /// The parameters given to the `#[bitfield]` proc. macro.
 pub struct ParamArgs {
-    args: Vec<syn::MetaNameValue>,
+    args: Vec<syn::Meta>,
 }
 
 impl syn::parse::Parse for ParamArgs {
@@ -17,8 +17,8 @@ impl syn::parse::Parse for ParamArgs {
 }
 
 impl IntoIterator for ParamArgs {
-    type Item = syn::MetaNameValue;
-    type IntoIter = std::vec::IntoIter<syn::MetaNameValue>;
+    type Item = syn::Meta;
+    type IntoIter = std::vec::IntoIter<syn::Meta>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.args.into_iter()
@@ -89,6 +89,29 @@ impl Config {
         Ok(())
     }
 
+    /// Feeds a `skip(...)` parameter to the `#[bitfield]` configuration.
+    fn feed_skip_param(&mut self, meta_list: &syn::MetaList) -> Result<()> {
+        meta_list.parse_nested_meta(|meta| {
+            let path = &meta.path;
+            if path.is_ident("all") {
+                self.skip(SkipMethod::New, path.span())?;
+                self.skip(SkipMethod::FromBytes, path.span())?;
+                self.skip(SkipMethod::IntoBytes, path.span())
+            } else if path.is_ident("convert") {
+                self.skip(SkipMethod::FromBytes, path.span())?;
+                self.skip(SkipMethod::IntoBytes, path.span())
+            } else if path.is_ident("new") {
+                self.skip(SkipMethod::New, path.span())
+            } else if path.is_ident("from_bytes") {
+                self.skip(SkipMethod::FromBytes, path.span())
+            } else if path.is_ident("into_bytes") {
+                self.skip(SkipMethod::IntoBytes, path.span())
+            } else {
+                Err(meta.error("encountered unknown or unsupported #[skip(..)] specifier"))
+            }
+        })
+    }
+
     /// Feeds the given parameters to the `#[bitfield]` configuration.
     ///
     /// # Errors
@@ -96,18 +119,20 @@ impl Config {
     /// If a parameter is malformatted, unexpected, duplicate or in conflict.
     pub fn feed_params<'a, P>(&mut self, params: P) -> Result<()>
     where
-        P: IntoIterator<Item = syn::MetaNameValue> + 'a,
+        P: IntoIterator<Item = syn::Meta> + 'a,
     {
-        for name_value in params {
-            if name_value.path.is_ident("bytes") {
-                self.feed_bytes_param(&name_value)?;
-            } else if name_value.path.is_ident("bits") {
-                self.feed_bits_param(&name_value)?;
-            } else if name_value.path.is_ident("filled") {
-                self.feed_filled_param(&name_value)?;
+        for param in params {
+            if param.path().is_ident("bytes") {
+                self.feed_bytes_param(param.require_name_value()?)?;
+            } else if param.path().is_ident("bits") {
+                self.feed_bits_param(param.require_name_value()?)?;
+            } else if param.path().is_ident("filled") {
+                self.feed_filled_param(param.require_name_value()?)?;
+            } else if param.path().is_ident("skip") {
+                self.feed_skip_param(param.require_list()?)?;
             } else {
                 return Err(format_err!(
-                    name_value,
+                    param,
                     "encountered unsupported #[bitfield] attribute"
                 ));
             }

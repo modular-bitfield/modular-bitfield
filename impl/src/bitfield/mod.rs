@@ -40,11 +40,7 @@ struct BitfieldStruct {
 
 fn raise_skip_error(skip_params: &str, span: Span, previous: Span) -> Result<()> {
     Err(crate::errors::CombineError::into_combine(
-        format_err!(
-            span,
-            "encountered duplicate `#[skip{}]` attribute for field",
-            skip_params
-        ),
+        format_err!(span, "encountered duplicate `#[skip{}]`", skip_params),
         format_err!(previous, "duplicate `#[skip{}]` here", skip_params),
     ))
 }
