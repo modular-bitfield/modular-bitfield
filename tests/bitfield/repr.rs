@@ -60,6 +60,15 @@ fn complex_use() {
 }
 
 #[test]
+fn generic_repr() {
+    #[bitfield]
+    #[repr(u8)]
+    struct Generic<const N: u8> {
+        v: u8,
+    }
+}
+
+#[test]
 fn multiple_valid_reprs_1() {
     #[bitfield]
     #[repr(C, u32)] // The macro simply ignores `repr(C)`

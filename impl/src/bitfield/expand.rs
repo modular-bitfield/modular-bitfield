@@ -410,7 +410,7 @@ impl BitfieldStruct {
                     #where_predicates
                 {
                     #[inline]
-                    fn from(__bf_bitfield: #ident) -> Self {
+                    fn from(__bf_bitfield: #ident #ty_generics) -> Self {
                         <Self>::from_le_bytes(__bf_bitfield.bytes)
                     }
                 }
