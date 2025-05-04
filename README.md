@@ -3,7 +3,7 @@
 [![crates](https://img.shields.io/crates/v/modular-bitfield.svg)](https://crates.io/crates/modular-bitfield)
 [![tests](https://github.com/modular-bitfield/modular-bitfield/actions/workflows/rust.yml/badge.svg)](https://github.com/modular-bitfield/modular-bitfield/actions/workflows/rust.yml)
 [![docs.rs](https://docs.rs/modular-bitfield/badge.svg)](https://docs.rs/modular-bitfield)
-[![codecov](https://codecov.io/gh/modular-bitfield/modular-bitfield/branch/master/graph/badge.svg)](https://codecov.io/gh/modular-bitfield/modular-bitfield)
+[![codecov](https://codecov.io/gh/modular-bitfield/modular-bitfield/graph/badge.svg?token=CVN2VO1fY6)](https://codecov.io/gh/modular-bitfield/modular-bitfield)
 
 - `no_std`: Supports embedded development without `std` library.
 - This crate uses and generates 100% safe Rust code.
