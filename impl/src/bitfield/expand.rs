@@ -110,6 +110,12 @@ impl BitfieldStruct {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+        let is_tuple = matches!(self.item_struct.fields, syn::Fields::Unnamed(_));
+        let builder_name = if is_tuple {
+            quote_spanned!(span=> debug_tuple)
+        } else {
+            quote_spanned!(span=> debug_struct)
+        };
         let fields = self.field_infos(config).map(|info| {
             let FieldInfo {
                 index: _,
@@ -120,7 +126,12 @@ impl BitfieldStruct {
                 return None;
             }
             let field_span = field.span();
-            let field_name = info.name();
+            let field_name = if field.ident.is_some() {
+                let field_name = info.name();
+                quote_spanned!(field_span=> #field_name,)
+            } else {
+                <_>::default()
+            };
             let field_ident = info.ident_frag();
             let field_getter = field.ident.as_ref().map_or_else(
                 || format_ident!("get_{}_or_err", field_ident),
@@ -128,7 +139,7 @@ impl BitfieldStruct {
             );
             Some(quote_spanned!(field_span=>
                 .field(
-                    #field_name,
+                    #field_name
                     self.#field_getter()
                         .as_ref()
                         .map_or_else(
@@ -141,7 +152,7 @@ impl BitfieldStruct {
         Some(quote_spanned!(span=>
             impl #impl_generics ::core::fmt::Debug for #ident #ty_generics #where_clause {
                 fn fmt(&self, __bf_f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    __bf_f.debug_struct(::core::stringify!(#ident))
+                    __bf_f.#builder_name(::core::stringify!(#ident))
                         #( #fields )*
                         .finish()
                 }

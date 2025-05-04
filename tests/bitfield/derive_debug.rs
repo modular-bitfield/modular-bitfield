@@ -138,3 +138,17 @@ fn valid_use() {
         "Color {\n    r: 0x3f,\n    g: 0x20,\n    b: 0x10,\n    a: 0x8,\n}",
     );
 }
+
+#[test]
+fn valid_use_tuple() {
+    #[bitfield]
+    #[derive(Debug)]
+    pub struct Color(B6, B6, B6, B6);
+
+    let color = Color::new().with_0(63).with_1(32).with_2(16).with_3(8);
+    assert_eq!(format!("{color:?}"), "Color(63, 32, 16, 8)",);
+    assert_eq!(
+        format!("{color:#x?}"),
+        "Color(\n    0x3f,\n    0x20,\n    0x10,\n    0x8,\n)",
+    );
+}
