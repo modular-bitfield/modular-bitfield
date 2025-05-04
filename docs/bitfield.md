@@ -111,6 +111,44 @@ pub struct Package {
 }
 ```
 
+## Parameter: `skip(..)`
+
+The `skip(..)` parameter skips generation of methods that would otherwise be
+dead code. Valid options are:
+
+* `all`: Alias for `new, from_bytes, into_bytes`.
+* `convert`: Alias for `from_bytes, into_bytes`.
+* `new`: Skip generating the `new` function.
+* `from_bytes`: Skip generating the `from_bytes` function.
+* `into_bytes`: Skip generating the `into_bytes` function.
+
+### Example 1
+
+```compile_fail
+# use modular_bitfield::prelude::*;
+#[bitfield(skip(new))]
+pub struct NoNew {
+    __: u8
+}
+
+NoNew::new(); // does not exist
+```
+
+### Example 2
+
+```compile_fail
+# use modular_bitfield::prelude::*;
+#[bitfield(skip(from_bytes, into_bytes))]
+pub struct NoFromBitsOrIntoBits {
+    __: u8
+}
+
+NoFromBitsOrIntoBits::from_bytes([0u8; 1]); // does not exist
+
+let bits = NoFromBitsOrIntoBits::new();
+bits.into_bytes(); // does not exist
+```
+
 ## Field Parameter: `#[bits = N]`
 
 To ensure at compile time that a field of a `#[bitfield]` struct has a bit width of exactly

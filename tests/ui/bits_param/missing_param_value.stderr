@@ -1,7 +1,5 @@
-error: expected `=`
- --> tests/ui/bits_param/missing_param_value.rs:3:1
+error: expected a value for this attribute: `bits = ...`
+ --> tests/ui/bits_param/missing_param_value.rs:3:12
   |
 3 | #[bitfield(bits)]
-  | ^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the attribute macro `bitfield` (in Nightly builds, run with -Z macro-backtrace for more info)
+  |            ^^^^

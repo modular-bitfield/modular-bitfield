@@ -1,4 +1,4 @@
-error: encountered duplicate `#[skip(getters)]` attribute for field
+error: encountered duplicate `#[skip(getters)]`
  --> tests/ui/skip/duplicate_getters_2.rs:5:15
   |
 5 |     #[skip] #[skip(getters)]

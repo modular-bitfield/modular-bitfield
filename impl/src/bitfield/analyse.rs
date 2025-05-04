@@ -5,7 +5,6 @@ use super::{
 };
 use core::convert::TryFrom;
 use quote::quote;
-use std::collections::HashMap;
 use syn::{self, parse::Result, spanned::Spanned as _};
 
 impl TryFrom<(&mut Config, syn::ItemStruct)> for BitfieldStruct {
@@ -190,38 +189,7 @@ impl BitfieldStruct {
                         config.skip(SkipWhich::All, path.span())?;
                     }
                     syn::Meta::List(meta_list) => {
-                        let mut which = HashMap::new();
-                        meta_list.parse_nested_meta(|meta| {
-                            let path = &meta.path;
-                            if path.is_ident("getters") {
-                                if let Some(previous) =
-                                    which.insert(SkipWhich::Getters, path.span())
-                                {
-                                    return raise_skip_error("(getters)", path.span(), previous);
-                                }
-                            } else if path.is_ident("setters") {
-                                if let Some(previous) =
-                                    which.insert(SkipWhich::Setters, path.span())
-                                {
-                                    return raise_skip_error("(setters)", path.span(), previous);
-                                }
-                            } else {
-                                return Err(meta.error(
-                                    "encountered unknown or unsupported #[skip(..)] specifier",
-                                ));
-                            }
-                            Ok(())
-                        })?;
-                        if which.is_empty()
-                            || which.contains_key(&SkipWhich::Getters)
-                                && which.contains_key(&SkipWhich::Setters)
-                        {
-                            config.skip(SkipWhich::All, meta_list.path.span())?;
-                        } else if which.contains_key(&SkipWhich::Getters) {
-                            config.skip(SkipWhich::Getters, meta_list.path.span())?;
-                        } else if which.contains_key(&SkipWhich::Setters) {
-                            config.skip(SkipWhich::Setters, meta_list.path.span())?;
-                        }
+                        extract_field_skip_list(&mut config, meta_list)?;
                     }
                     meta @ syn::Meta::NameValue(..) => {
                         return Err(format_err!(
@@ -234,6 +202,52 @@ impl BitfieldStruct {
                 config.retain_attr(attr.clone());
             }
         }
+
+        implicit_field_skip(&mut config, field.ident.as_ref())?;
+
         Ok(config)
     }
+}
+
+fn implicit_field_skip(config: &mut FieldConfig, ident: Option<&syn::Ident>) -> Result<()> {
+    fn skip_span(ident: Option<&syn::Ident>) -> Option<proc_macro2::Span> {
+        ident.and_then(|ident| ident.to_string().starts_with('_').then(|| ident.span()))
+    }
+
+    if !config.skip_getters() && !config.skip_setters() {
+        if let Some(span) = skip_span(ident) {
+            config.skip(SkipWhich::All, span)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn extract_field_skip_list(config: &mut FieldConfig, meta_list: &syn::MetaList) -> Result<()> {
+    let (mut getters, mut setters) = (None, None);
+    meta_list.parse_nested_meta(|meta| {
+        let path = &meta.path;
+        if path.is_ident("getters") {
+            if let Some(previous) = getters.replace(path.span()) {
+                return raise_skip_error("(getters)", path.span(), previous);
+            }
+        } else if path.is_ident("setters") {
+            if let Some(previous) = setters.replace(path.span()) {
+                return raise_skip_error("(setters)", path.span(), previous);
+            }
+        } else {
+            return Err(meta.error("encountered unknown or unsupported #[skip(..)] specifier"));
+        }
+        Ok(())
+    })?;
+
+    let which = if getters.is_none() == setters.is_none() {
+        SkipWhich::All
+    } else if getters.is_some() {
+        SkipWhich::Getters
+    } else {
+        SkipWhich::Setters
+    };
+
+    config.skip(which, meta_list.path.span())
 }
