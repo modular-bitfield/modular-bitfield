@@ -1,9 +1,9 @@
 # Modular Bitfields for Rust
 
 [![crates](https://img.shields.io/crates/v/modular-bitfield.svg)](https://crates.io/crates/modular-bitfield)
-[![tests](https://github.com/Robbepop/modular-bitfield/actions/workflows/rust.yml/badge.svg)](https://github.com/Robbepop/modular-bitfield/actions/workflows/rust.yml)
+[![tests](https://github.com/modular-bitfield/modular-bitfield/actions/workflows/rust.yml/badge.svg)](https://github.com/modular-bitfield/modular-bitfield/actions/workflows/rust.yml)
 [![docs.rs](https://docs.rs/modular-bitfield/badge.svg)](https://docs.rs/modular-bitfield)
-[![codecov](https://codecov.io/gh/Robbepop/modular-bitfield/branch/master/graph/badge.svg)](https://codecov.io/gh/Robbepop/modular-bitfield)
+[![codecov](https://codecov.io/gh/modular-bitfield/modular-bitfield/branch/master/graph/badge.svg)](https://codecov.io/gh/modular-bitfield/modular-bitfield)
 
 - `no_std`: Supports embedded development without `std` library.
 - This crate uses and generates 100% safe Rust code.
@@ -225,7 +225,7 @@ We can conclude that the macro-generated code is as fast as hand-written code wo
 
 [Click here to view all benchmark results.][benchmark-results]
 
-[benchmark-code]: https://github.com/Robbepop/modular-bitfield/blob/master/benches/handwritten.rs
+[benchmark-code]: https://github.com/modular-bitfield/modular-bitfield/blob/master/benches/handwritten.rs
 [benchmark-results]: https://gist.github.com/Robbepop/bcff4fe149e0e622b752f0eb07b31880
 
 ### Summary

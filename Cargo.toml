@@ -11,7 +11,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 publish = false # Use `release.sh`
 documentation = "https://docs.rs/modular-bitfield"
-repository = "https://github.com/Robbepop/modular-bitfield"
+repository = "https://github.com/modular-bitfield/modular-bitfield"
 rust-version = "1.70.0"
 version = "0.12.0-pre"
 

@@ -2,7 +2,7 @@
 
 set -ueo pipefail
 
-DEFAULT_REPO=Robbepop/modular-bitfield
+DEFAULT_REPO=modular-bitfield/modular-bitfield
 DEFAULT_BRANCH=master
 
 usage() {
