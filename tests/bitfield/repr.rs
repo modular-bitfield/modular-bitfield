@@ -97,19 +97,34 @@ fn valid_cond_use() {
     assert_eq!(i1.value(), i2.value());
 }
 
-#[test]
-fn valid_use() {
-    #[bitfield]
-    #[repr(u32)]
-    #[derive(Debug, PartialEq, Eq)]
-    pub struct SignedInt {
-        sign: bool,
-        value: B31,
-    }
+macro_rules! valid_use {
+    ($(($name:ident, $repr_ty:ty, $value_ty:ty)),*$(,)?) => {
+        $(#[test]
+        fn $name() {
+            #[bitfield]
+            #[repr($repr_ty)]
+            #[derive(Debug, PartialEq, Eq)]
+            pub struct SignedInt {
+                value: $value_ty,
+                sign: bool,
+            }
 
-    let i1 = SignedInt::new().with_sign(true).with_value(0b1001_0011);
-    let i2 = SignedInt::from(0b0000_0000_0000_0000_0000_0001_0010_0111_u32);
-    assert_eq!(i1, i2);
-    assert_eq!(i1.sign(), i2.sign());
-    assert_eq!(i1.value(), i2.value());
+            let value = 0b101_0011;
+            let bits = (1 << (<$repr_ty>::BITS - 1)) | value;
+
+            let i1 = SignedInt::new().with_sign(true).with_value(value);
+            let i2 = SignedInt::from(bits);
+            assert_eq!(i1, i2);
+            assert_eq!(i1.sign(), i2.sign());
+            assert_eq!(i1.value(), i2.value());
+        })*
+    }
 }
+
+valid_use!(
+    (valid_use_u8, u8, B7),
+    (valid_use_u16, u16, B15),
+    (valid_use_u32, u32, B31),
+    (valid_use_u64, u64, B63),
+    (valid_use_u128, u128, B127)
+);
