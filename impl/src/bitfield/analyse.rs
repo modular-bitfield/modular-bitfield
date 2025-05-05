@@ -219,7 +219,7 @@ impl BitfieldStruct {
                             config.skip(SkipWhich::All, meta_list.path.span())?;
                         } else if which.contains_key(&SkipWhich::Getters) {
                             config.skip(SkipWhich::Getters, meta_list.path.span())?;
-                        } else if which.contains_key(&SkipWhich::Setters) {
+                        } else {
                             config.skip(SkipWhich::Setters, meta_list.path.span())?;
                         }
                     }
