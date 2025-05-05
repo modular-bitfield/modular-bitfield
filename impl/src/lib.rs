@@ -44,7 +44,7 @@ fn ui_code_coverage() {
     use std::fs::File;
 
     let mut run_success = true;
-    for entry in glob::glob("../tests/ui/*/**/*.rs").unwrap() {
+    for entry in glob::glob("../tests/ui/**/*.rs").unwrap() {
         let entry = entry.unwrap();
         run_success &= emulate_attributelike_macro_expansion(
             File::open(entry.as_path()).unwrap(),
