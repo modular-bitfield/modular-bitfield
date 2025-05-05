@@ -1,11 +1,119 @@
 error: encountered duplicate `#[skip]` attribute for field
- --> tests/ui/skip/duplicate_attr.rs:5:15
+ --> tests/ui/skip/duplicate_attr.rs:6:7
   |
-5 |     #[skip] #[skip]
-  |               ^^^^
+6 |     #[skip]
+  |       ^^^^
 
 error: duplicate `#[skip]` here
  --> tests/ui/skip/duplicate_attr.rs:5:7
   |
-5 |     #[skip] #[skip]
+5 |     #[skip]
   |       ^^^^
+
+error: encountered duplicate `#[skip]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:14:7
+   |
+14 |     #[skip()]
+   |       ^^^^
+
+error: duplicate `#[skip]` here
+  --> tests/ui/skip/duplicate_attr.rs:13:7
+   |
+13 |     #[skip()]
+   |       ^^^^
+
+error: encountered duplicate `#[skip(getters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:22:7
+   |
+22 |     #[skip(getters)]
+   |       ^^^^
+
+error: duplicate `#[skip(getters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:21:7
+   |
+21 |     #[skip(getters)]
+   |       ^^^^
+
+error: encountered duplicate `#[skip(getters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:29:21
+   |
+29 |     #[skip(getters, getters)]
+   |                     ^^^^^^^
+
+error: duplicate `#[skip(getters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:29:12
+   |
+29 |     #[skip(getters, getters)]
+   |            ^^^^^^^
+
+error: encountered duplicate `#[skip(getters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:37:7
+   |
+37 |     #[skip(getters)]
+   |       ^^^^
+
+error: duplicate `#[skip(getters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:36:7
+   |
+36 |     #[skip]
+   |       ^^^^
+
+error: encountered duplicate `#[skip]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:45:7
+   |
+45 |     #[skip]
+   |       ^^^^
+
+error: duplicate `#[skip]` here
+  --> tests/ui/skip/duplicate_attr.rs:44:7
+   |
+44 |     #[skip(getters)]
+   |       ^^^^
+
+error: encountered duplicate `#[skip(setters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:53:7
+   |
+53 |     #[skip(setters)]
+   |       ^^^^
+
+error: duplicate `#[skip(setters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:52:7
+   |
+52 |     #[skip(setters)]
+   |       ^^^^
+
+error: encountered duplicate `#[skip(setters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:60:21
+   |
+60 |     #[skip(setters, setters)]
+   |                     ^^^^^^^
+
+error: duplicate `#[skip(setters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:60:12
+   |
+60 |     #[skip(setters, setters)]
+   |            ^^^^^^^
+
+error: encountered duplicate `#[skip(setters)]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:68:7
+   |
+68 |     #[skip(setters)]
+   |       ^^^^
+
+error: duplicate `#[skip(setters)]` here
+  --> tests/ui/skip/duplicate_attr.rs:67:7
+   |
+67 |     #[skip]
+   |       ^^^^
+
+error: encountered duplicate `#[skip]` attribute for field
+  --> tests/ui/skip/duplicate_attr.rs:76:7
+   |
+76 |     #[skip]
+   |       ^^^^
+
+error: duplicate `#[skip]` here
+  --> tests/ui/skip/duplicate_attr.rs:75:7
+   |
+75 |     #[skip(setters)]
+   |       ^^^^

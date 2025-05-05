@@ -1,22 +1,40 @@
-// This is just the compile_fail version of the previous test case, testing what
-// error happens if the user has written an incorrect #[bits = N] attribute.
-//
-// Ensure that the error message points to the incorrect attribute and contains
-// the correct number of bits in some form.
-
 use modular_bitfield::prelude::*;
-
-#[bitfield]
-pub struct RedirectionTableEntry {
-    #[bits = 9]
-    trigger_mode: TriggerMode,
-    reserved: B7,
-}
 
 #[derive(Specifier, Debug)]
 pub enum TriggerMode {
     Edge = 0,
     Level = 1,
+}
+
+#[bitfield]
+pub struct MismatchedTypes {
+    #[bits = 9]
+    trigger_mode: TriggerMode,
+    reserved: B7,
+}
+
+const NOT_A_LITERAL: u32 = 9;
+
+#[bitfield]
+pub struct InvalidValueType {
+    #[bits = NOT_A_LITERAL]
+    trigger_mode: TriggerMode,
+    reserved: B7,
+}
+
+#[bitfield]
+pub struct DuplicateAttribute {
+    #[bits = 1]
+    #[bits = 1]
+    trigger_mode: TriggerMode,
+    reserved: B7,
+}
+
+#[bitfield]
+pub struct NotANameValue {
+    #[bits(1)]
+    trigger_mode: TriggerMode,
+    reserved: B7,
 }
 
 fn main() {}

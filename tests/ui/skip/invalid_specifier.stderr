@@ -3,3 +3,9 @@ error: encountered unknown or unsupported #[skip(..)] specifier
   |
 5 |     #[skip(invalid_specifier)]
   |            ^^^^^^^^^^^^^^^^^
+
+error: encountered invalid format for #[skip] field attribute
+  --> tests/ui/skip/invalid_specifier.rs:17:7
+   |
+17 |     #[skip = 1]
+   |       ^^^^

@@ -1,0 +1,5 @@
+error: encountered unsupported #[bitfield] attribute
+ --> tests/ui/bitfield_attribute_wrong.rs:3:12
+  |
+3 | #[bitfield(unknown_attribute = 0)]
+  |            ^^^^^^^^^^^^^^^^^

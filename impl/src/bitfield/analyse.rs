@@ -176,9 +176,9 @@ impl BitfieldStruct {
                     }) => {
                         config.bits(lit_int.base10_parse::<usize>()?, span)?;
                     }
-                    _ => {
+                    value => {
                         return Err(format_err!(
-                            span,
+                            value.span(),
                             "encountered invalid value type for #[bits = N]"
                         ))
                     }

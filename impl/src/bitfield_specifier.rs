@@ -43,7 +43,7 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
             if acc.bits.is_some() {
                 return Err(format_err_spanned!(
                     attr,
-                    "More than one 'bits' attributes is not permitted",
+                    "More than one 'bits' attribute is not permitted",
                 ));
             }
             let meta = attr.meta.require_name_value()?;

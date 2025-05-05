@@ -57,7 +57,7 @@ impl FieldConfig {
     ///
     /// # Errors
     ///
-    /// If previously already registered a `#[bits = M]`.
+    /// If previously already registered a `#[bits = N]`.
     pub fn bits(&mut self, amount: usize, span: Span) -> Result<(), syn::Error> {
         match self.bits {
             Some(ref previous) => {
@@ -65,7 +65,7 @@ impl FieldConfig {
                     span,
                     "encountered duplicate `#[bits = N]` attribute for field"
                 )
-                .into_combine(format_err!(previous.span, "duplicate `#[bits = M]` here")))
+                .into_combine(format_err!(previous.span, "duplicate `#[bits = N]` here")))
             }
             None => {
                 self.bits = Some(ConfigValue {
