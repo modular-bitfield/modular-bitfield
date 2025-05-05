@@ -9,11 +9,11 @@ resolver = "2"
 authors = ["Robin Freyler <robinfreyler@web.de>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-publish = false # Use `release.sh`
+publish = true
 documentation = "https://docs.rs/modular-bitfield"
 repository = "https://github.com/modular-bitfield/modular-bitfield"
 rust-version = "1.70.0"
-version = "0.12.0-pre"
+version = "0.12.0"
 
 [package]
 name = "modular-bitfield"
@@ -31,7 +31,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-modular-bitfield-impl = { path = "impl", version = "0.12.0-pre" }
+modular-bitfield-impl = { path = "impl", version = "0.12.0" }
 static_assertions = "1.1"
 
 [dev-dependencies]
