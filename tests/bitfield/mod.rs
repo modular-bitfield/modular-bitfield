@@ -150,6 +150,16 @@ fn tuple_structs() {
     assert_eq!(test.get_2(), 0xFF);
 }
 
+#[test]
+fn bool_specifier() {
+    assert_eq!(bool::from_bytes(0), Ok(false));
+    assert_eq!(bool::from_bytes(1), Ok(true));
+    assert_eq!(
+        bool::from_bytes(2),
+        Err(modular_bitfield::error::InvalidBitPattern { invalid_bytes: 2 })
+    );
+}
+
 // Tests to check for correct execution of checked setters.
 #[test]
 fn checked_setters() {
