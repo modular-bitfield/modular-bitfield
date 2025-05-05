@@ -35,9 +35,20 @@ fn valid_bitfield_specifier_1() {
 fn valid_bitfield_specifier_2() {
     // The bitfield has 24 bits and therefore is filled.
     #[bitfield(filled = true)]
-    #[derive(Specifier)]
+    #[derive(Specifier, Debug, PartialEq, Eq, Clone, Copy)]
     pub struct FilledSpecifier {
         a: B8,
         b: u16,
     }
+
+    // Testing impl_array_bytes_conversion_for_size
+    let value = FilledSpecifier::new().with_a(1).with_b(0x302);
+    assert_eq!(
+        <FilledSpecifier as Specifier>::from_bytes(0x0003_0201),
+        Ok(value)
+    );
+    assert_eq!(
+        <FilledSpecifier as Specifier>::into_bytes(value),
+        Ok(0x0003_0201)
+    );
 }
