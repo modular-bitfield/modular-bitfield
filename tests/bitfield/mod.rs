@@ -222,6 +222,30 @@ fn checked_setters() {
     assert_eq!(bitfield.c(), 42);
 }
 
+#[test]
+fn errors() {
+    extern crate alloc;
+    use alloc::format;
+
+    let msg = format!("{}", modular_bitfield::error::OutOfBounds);
+    assert!(
+        msg.contains("out of bounds"),
+        "unexpected error text: {msg}"
+    );
+
+    let msg = format!(
+        "{}",
+        modular_bitfield::error::InvalidBitPattern {
+            invalid_bytes: 0x1234_5678
+        }
+    );
+    assert!(
+        msg.contains("invalid bit pattern"),
+        "unexpected error text: {msg}"
+    );
+    assert!(msg.contains("0x12345678"), "unexpected error text: {msg}");
+}
+
 // Tests if it is possible to manually reset the bitfields again.
 #[test]
 fn manual_reset() {

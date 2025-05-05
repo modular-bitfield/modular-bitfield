@@ -26,7 +26,7 @@ where
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "encountered an invalid bit pattern: {:X?}",
+            "encountered an invalid bit pattern: 0x{:X?}",
             self.invalid_bytes
         )
     }
