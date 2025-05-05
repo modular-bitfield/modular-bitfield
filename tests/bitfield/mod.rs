@@ -156,7 +156,7 @@ fn bool_specifier() {
     assert_eq!(bool::from_bytes(1), Ok(true));
     assert_eq!(
         bool::from_bytes(2),
-        Err(modular_bitfield::error::InvalidBitPattern { invalid_bytes: 2 })
+        Err(modular_bitfield::error::InvalidBitPattern::new(2))
     );
 }
 
@@ -235,9 +235,7 @@ fn errors() {
 
     let msg = format!(
         "{}",
-        modular_bitfield::error::InvalidBitPattern {
-            invalid_bytes: 0x1234_5678
-        }
+        modular_bitfield::error::InvalidBitPattern::new(0x1234_5678)
     );
     assert!(
         msg.contains("invalid bit pattern"),
@@ -536,10 +534,7 @@ fn single_bit_enum() {
 
     // Initialized to all 0 bits.
     let entry = UselessStruct::new();
-    assert_eq!(
-        entry.field_or_err(),
-        Err(InvalidBitPattern { invalid_bytes: 0 })
-    );
+    assert_eq!(entry.field_or_err(), Err(InvalidBitPattern::new(0)));
 
     let entry = UselessStruct::new().with_field(ForciblyTrue::True);
     assert_eq!(entry.field_or_err(), Ok(ForciblyTrue::True));

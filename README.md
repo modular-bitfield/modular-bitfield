@@ -209,7 +209,7 @@ construct bitfields that may contain invalid bit patterns:
 let mut data = PackedData::from_bytes([0b0000_0000, 0b1100_0000]);
 //           The 2 status field bits are invalid -----^^
 //           as Red = 0x00, Green = 0x01 and Yellow = 0x10
-assert_eq!(data.status_or_err(), Err(InvalidBitPattern { invalid_bytes: 0b11 }));
+assert_eq!(data.status_or_err(), Err(InvalidBitPattern::new(0b11)));
 data.set_status(Status::Green);
 assert_eq!(data.status_or_err(), Ok(Status::Green));
 ```

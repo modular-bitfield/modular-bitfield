@@ -92,13 +92,14 @@ impl BitfieldStruct {
                     let __bf_max_value: Self::Bytes = (0x01 as Self::Bytes)
                         .checked_shl(u32::try_from(Self::BITS).unwrap())
                         .unwrap_or(<Self::Bytes>::MAX);
-                    if bytes > __bf_max_value {
-                        return ::core::result::Result::Err(::modular_bitfield::error::InvalidBitPattern::new(bytes))
+                    if bytes <= __bf_max_value {
+                        let __bf_bytes = bytes.to_le_bytes();
+                        ::core::result::Result::Ok(Self {
+                            bytes: <[(); #next_divisible_by_8] as ::modular_bitfield::private::ArrayBytesConversion>::bytes_into_array(bytes)
+                        })
+                    } else {
+                        ::core::result::Result::Err(::modular_bitfield::error::InvalidBitPattern::new(bytes))
                     }
-                    let __bf_bytes = bytes.to_le_bytes();
-                    ::core::result::Result::Ok(Self {
-                        bytes: <[(); #next_divisible_by_8] as ::modular_bitfield::private::ArrayBytesConversion>::bytes_into_array(bytes)
-                    })
                 }
             }
         ))
@@ -447,10 +448,11 @@ impl BitfieldStruct {
                 pub fn from_bytes(
                     bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]
                 ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
-                    if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) >= (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
-                        return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+                    if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) < (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
+                        ::core::result::Result::Ok(Self { bytes })
+                    } else {
+                        ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
                     }
-                    ::core::result::Result::Ok(Self { bytes })
                 }
             )
         };
@@ -669,11 +671,12 @@ impl BitfieldStruct {
                 }?;
                 // We compare base bits with spec bits to drop this condition
                 // if there cannot be invalid inputs.
-                if !(__bf_base_bits == __bf_spec_bits || __bf_raw_val <= __bf_max_value) {
-                    return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+                if __bf_base_bits == __bf_spec_bits || __bf_raw_val <= __bf_max_value {
+                    ::modular_bitfield::private::write_specifier::<#ty>(&mut self.bytes[..], #offset, __bf_raw_val);
+                    ::core::result::Result::Ok(())
+                } else {
+                    ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
                 }
-                ::modular_bitfield::private::write_specifier::<#ty>(&mut self.bytes[..], #offset, __bf_raw_val);
-                ::core::result::Result::Ok(())
             }
         );
         Some(setters)

@@ -1,9 +1,9 @@
-//! Errors that can occure while operating on modular bitfields.
+//! Errors that can occur while operating on modular bitfields.
 
 use core::fmt::Debug;
 
 /// The given value was out of range for the bitfield.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct OutOfBounds;
 
 impl core::fmt::Display for OutOfBounds {
@@ -13,10 +13,10 @@ impl core::fmt::Display for OutOfBounds {
 }
 
 /// The bitfield contained an invalid bit pattern.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InvalidBitPattern<Bytes> {
     /// The invalid bits.
-    pub invalid_bytes: Bytes,
+    invalid_bytes: Bytes,
 }
 
 impl<Bytes> core::fmt::Display for InvalidBitPattern<Bytes>

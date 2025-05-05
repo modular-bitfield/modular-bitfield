@@ -18,7 +18,7 @@ impl Specifier for bool {
         match bytes {
             0 => Ok(false),
             1 => Ok(true),
-            invalid_bytes => Err(InvalidBitPattern { invalid_bytes }),
+            invalid_bytes => Err(InvalidBitPattern::new(invalid_bytes)),
         }
     }
 }

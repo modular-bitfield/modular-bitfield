@@ -43,7 +43,7 @@ use modular_bitfield::prelude::*;
 // then the number of bits required to represent the struct is coerced to N.
 //
 //     let mut bitfield = MyBitfield::new();
-//     assert_eq!(0, bitfield.small_prime_or_err().unwrap_err().invalid_bytes);
+//     assert_eq!(0, bitfield.small_prime_or_err().unwrap_err().invalid_bytes());
 //
 //     bitfield.set_small_prime(SmallPrime::Seven);
 //     let p = bitfield.small_prime_or_err().unwrap_or(SmallPrime::Two);
@@ -97,11 +97,8 @@ fn enums() {
     assert!(!entry.acknowledged());
     assert_eq!(entry.trigger_mode(), TriggerMode::Edge);
     assert_eq!(entry.delivery_mode(), DeliveryMode::Fixed);
-    assert_eq!(
-        entry.small_prime_or_err(),
-        Err(InvalidBitPattern { invalid_bytes: 0 })
-    );
-    assert_eq!(entry.small_prime_or_err().unwrap_err().invalid_bytes, 0);
+    assert_eq!(entry.small_prime_or_err(), Err(InvalidBitPattern::new(0)));
+    assert_eq!(entry.small_prime_or_err().unwrap_err().invalid_bytes(), 0);
 
     entry.set_acknowledged(true);
     entry.set_delivery_mode(DeliveryMode::Smi);

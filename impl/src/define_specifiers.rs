@@ -42,18 +42,20 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
 
             #[inline]
             fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, crate::OutOfBounds> {
-                if input > #max_value {
-                    return Err(crate::OutOfBounds)
+                if input <= #max_value {
+                    Ok(input)
+                } else {
+                    Err(crate::OutOfBounds)
                 }
-                Ok(input)
             }
 
             #[inline]
             fn from_bytes(bytes: Self::Bytes) -> Result<Self::InOut, crate::InvalidBitPattern<Self::Bytes>> {
-                if bytes > #max_value {
-                    return Err(crate::InvalidBitPattern { invalid_bytes: bytes })
+                if bytes <= #max_value {
+                    Ok(bytes)
+                } else {
+                    Err(crate::InvalidBitPattern::new(bytes))
                 }
-                Ok(bytes)
             }
         }
 
