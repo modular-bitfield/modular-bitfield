@@ -5,7 +5,6 @@ use super::{
 };
 use core::convert::TryFrom;
 use quote::quote;
-use std::collections::HashMap;
 use syn::{self, parse::Result, spanned::Spanned as _};
 
 impl TryFrom<(&mut Config, syn::ItemStruct)> for BitfieldStruct {
@@ -190,21 +189,19 @@ impl BitfieldStruct {
                         config.skip(SkipWhich::All, path.span())?;
                     }
                     syn::Meta::List(meta_list) => {
-                        let mut which = HashMap::new();
+                        let (mut getters, mut setters) = (None, None);
                         meta_list.parse_nested_meta(|meta| {
                             let path = &meta.path;
                             if path.is_ident("getters") {
-                                if let Some(previous) =
-                                    which.insert(SkipWhich::Getters, path.span())
-                                {
+                                if let Some(previous) = getters {
                                     return raise_skip_error("(getters)", path.span(), previous);
                                 }
+                                getters = Some(path.span());
                             } else if path.is_ident("setters") {
-                                if let Some(previous) =
-                                    which.insert(SkipWhich::Setters, path.span())
-                                {
+                                if let Some(previous) = setters {
                                     return raise_skip_error("(setters)", path.span(), previous);
                                 }
+                                setters = Some(path.span());
                             } else {
                                 return Err(meta.error(
                                     "encountered unknown or unsupported #[skip(..)] specifier",
@@ -212,12 +209,9 @@ impl BitfieldStruct {
                             }
                             Ok(())
                         })?;
-                        if which.is_empty()
-                            || which.contains_key(&SkipWhich::Getters)
-                                && which.contains_key(&SkipWhich::Setters)
-                        {
+                        if getters.is_some() == setters.is_some() {
                             config.skip(SkipWhich::All, meta_list.path.span())?;
-                        } else if which.contains_key(&SkipWhich::Getters) {
+                        } else if getters.is_some() {
                             config.skip(SkipWhich::Getters, meta_list.path.span())?;
                         } else {
                             config.skip(SkipWhich::Setters, meta_list.path.span())?;
