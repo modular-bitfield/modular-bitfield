@@ -426,37 +426,72 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
-        let from_bytes = if config.filled_enabled() {
-            quote_spanned!(span=>
-                /// Converts the given bytes directly into the bitfield struct.
-                #[inline]
-                #[allow(clippy::identity_op)]
-                #[must_use]
-                pub const fn from_bytes(bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]) -> Self {
-                    Self { bytes }
-                }
+        let bytes_ty =
+            quote_spanned!(span=> [::core::primitive::u8; #next_divisible_by_8 / 8usize]);
+        let (from_bytes, from_impl) = if config.filled_enabled() {
+            (
+                quote_spanned!(span=>
+                    /// Converts the given bytes directly into the bitfield struct.
+                    #[inline]
+                    #[allow(clippy::identity_op)]
+                    #[must_use]
+                    pub const fn from_bytes(bytes: #bytes_ty) -> Self {
+                        Self { bytes }
+                    }
+                ),
+                quote_spanned!(span=>
+                    #[allow(clippy::identity_op)]
+                    impl #impl_generics ::core::convert::From<#bytes_ty> for #ident #ty_generics #where_clause {
+                        fn from(bytes: #bytes_ty) -> Self {
+                            Self::from_bytes(bytes)
+                        }
+                    }
+                ),
             )
         } else {
-            quote_spanned!(span=>
-                /// Converts the given bytes directly into the bitfield struct.
-                ///
-                /// # Errors
-                ///
-                /// If the given bytes contain bits at positions that are undefined for `Self`.
-                #[inline]
-                #[allow(clippy::identity_op)]
-                pub fn from_bytes(
-                    bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]
-                ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
-                    if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) < (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
-                        ::core::result::Result::Ok(Self { bytes })
-                    } else {
-                        ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+            (
+                quote_spanned!(span=>
+                    /// Converts the given bytes directly into the bitfield struct.
+                    ///
+                    /// # Errors
+                    ///
+                    /// If the given bytes contain bits at positions that are undefined for `Self`.
+                    #[inline]
+                    #[allow(clippy::identity_op)]
+                    pub fn from_bytes(
+                        bytes: #bytes_ty
+                    ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
+                        if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) < (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
+                            ::core::result::Result::Ok(Self { bytes })
+                        } else {
+                            ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+                        }
                     }
-                }
+                ),
+                quote_spanned!(span=>
+                    #[allow(clippy::identity_op)]
+                    impl #impl_generics ::core::convert::TryFrom<#bytes_ty> for #ident #ty_generics #where_clause {
+                        type Error = ::modular_bitfield::error::OutOfBounds;
+
+                        #[inline]
+                        fn try_from(bytes: #bytes_ty) -> ::core::result::Result<Self, Self::Error> {
+                            Self::from_bytes(bytes)
+                        }
+                    }
+                ),
             )
         };
         quote_spanned!(span=>
+            #from_impl
+
+            #[allow(clippy::identity_op)]
+            impl #impl_generics ::core::convert::From<#ident #ty_generics> for #bytes_ty #where_clause {
+                #[inline]
+                fn from(bytes: #ident #ty_generics) -> Self {
+                    bytes.into_bytes()
+                }
+            }
+
             impl #impl_generics #ident #ty_generics #where_clause {
                 /// Returns the underlying bits.
                 ///
@@ -466,7 +501,7 @@ impl BitfieldStruct {
                 /// [here](https://docs.rs/modular-bitfield/#generated-structure).
                 #[inline]
                 #[allow(clippy::identity_op)]
-                pub const fn into_bytes(self) -> [::core::primitive::u8; #next_divisible_by_8 / 8usize] {
+                pub const fn into_bytes(self) -> #bytes_ty {
                     self.bytes
                 }
 

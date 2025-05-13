@@ -547,3 +547,32 @@ fn generic() {
         v: u8,
     }
 }
+
+#[test]
+fn impl_from_trait() {
+    #[bitfield]
+    #[derive(Clone, Copy)]
+    struct Test {
+        value: u8,
+    }
+
+    let v = Test::from([127]);
+    assert_eq!(v.value(), 127);
+    let v: [u8; 1] = v.into();
+    assert_eq!(v, [127]);
+}
+
+#[test]
+fn impl_try_from_trait() {
+    #[bitfield(filled = false)]
+    #[derive(Clone, Copy, Debug)]
+    struct Test {
+        value: B7,
+    }
+
+    Test::try_from([128]).unwrap_err();
+    let v = Test::try_from([127]).unwrap();
+    assert_eq!(v.value(), 127);
+    let v: [u8; 1] = v.into();
+    assert_eq!(v, [127]);
+}
