@@ -28,15 +28,6 @@ pub fn specifier(input: TokenStream) -> TokenStream {
     bitfield_specifier::generate(input.into()).into()
 }
 
-#[deprecated(
-    since = "0.12.0",
-    note = "use #[derive(Specifier)]. This alias will be removed in 0.13."
-)]
-#[proc_macro_derive(BitfieldSpecifier, attributes(bits))]
-pub fn bitfield_specifier(input: TokenStream) -> TokenStream {
-    bitfield_specifier::generate(input.into()).into()
-}
-
 #[cfg(coverage)]
 #[test]
 fn ui_code_coverage() {

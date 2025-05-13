@@ -48,16 +48,7 @@ impl BitfieldStruct {
         let bits = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&bits);
 
-        let deprecation_warning = config.deprecated_specifier.map(|span| {
-            quote_spanned!(span=> const _: () = {
-                #[derive(::modular_bitfield::BitfieldSpecifier)]
-                enum #ident { A = 0, B = 1 }
-            };)
-        });
-
         Some(quote_spanned!(span=>
-            #deprecation_warning
-
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::CheckSpecifierHasAtMost128Bits for #ident #ty_generics #where_clause {

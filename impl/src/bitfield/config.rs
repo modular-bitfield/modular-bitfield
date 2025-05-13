@@ -14,7 +14,6 @@ pub struct Config {
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
     pub derive_specifier: Option<ConfigValue<()>>,
-    pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
     pub field_configs: HashMap<usize, ConfigValue<FieldConfig>>,
 }
@@ -264,12 +263,6 @@ impl Config {
             None => self.derive_specifier = Some(ConfigValue::new((), span)),
         }
         Ok(())
-    }
-
-    /// Tell codegen to raise a warning about use of the deprecated
-    /// `#[derive(BitfieldSpecifier)]`.
-    pub fn deprecated_specifier(&mut self, span: Span) {
-        self.deprecated_specifier = Some(span);
     }
 
     /// Pushes another retained attribute that the #[bitfield] macro is going to re-expand and ignore.

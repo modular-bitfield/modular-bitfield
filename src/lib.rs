@@ -15,13 +15,8 @@ pub use modular_bitfield_impl::bitfield;
 #[doc = include_str!("../docs/bitfield_specifier.md")]
 pub use modular_bitfield_impl::Specifier;
 
-#[doc(hidden)]
-pub use modular_bitfield_impl::BitfieldSpecifier;
-
 /// The prelude: `use modular_bitfield::prelude::*;`
 pub mod prelude {
-    #[doc(hidden)]
-    pub use super::BitfieldSpecifier;
     pub use super::{bitfield, specifiers::*, Specifier};
 }
 
