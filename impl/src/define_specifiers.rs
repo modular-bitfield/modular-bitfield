@@ -2,7 +2,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
 pub fn generate(_input: TokenStream2) -> TokenStream2 {
-    let specifiers = (1usize..=128).map(generate_specifier_for);
+    let specifiers = (1..=128).map(generate_specifier_for);
     quote! {
         #( #specifiers )*
     }
@@ -28,7 +28,7 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
         // so this will yield a no-op in release mode builds.
         quote! {{ <#in_out>::MAX }}
     } else {
-        quote! {{ ((0x01 as #in_out) << #bits) - 1 }}
+        quote! {{ ((1 as #in_out) << #bits) - 1 }}
     };
     quote! {
         #[doc = #doc_comment]

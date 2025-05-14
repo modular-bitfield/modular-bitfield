@@ -23,7 +23,7 @@ impl PopBits for PopBuffer<u8> {
         debug_assert!((1..=8).contains(&amount));
         // Truncation is always valid due to shift range
         #[allow(clippy::cast_possible_truncation)]
-        let res = *bytes & (0x01_u16.wrapping_shl(amount).wrapping_sub(1) as u8);
+        let res = *bytes & (1_u16.wrapping_shl(amount).wrapping_sub(1) as u8);
         *bytes = bytes.checked_shr(amount).unwrap_or(0);
         debug_assert_eq!(res.count_ones() + bytes.count_ones(), orig_ones);
         res

@@ -108,7 +108,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
                 ::modular_bitfield::private::checks::BitCount<{Self::#ident as ::core::primitive::usize}>
             > for #enum_ident #ty_generics #where_clause {
                 type CheckType = ::modular_bitfield::private::checks::BitCount<{
-                    ((Self::#ident as ::core::primitive::usize) < (0x01_usize << #bits)) as ::core::primitive::usize
+                    ((Self::#ident as ::core::primitive::usize) < (1 << #bits)) as ::core::primitive::usize
                 }>;
             }
         )
@@ -126,8 +126,8 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
         #( #check_discriminants )*
 
         impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
-            const BITS: usize = #bits;
-            type Bytes = <::modular_bitfield::private::checks::BitCount<{#bits}> as ::modular_bitfield::private::SpecifierBytes>::Bytes;
+            const BITS: ::core::primitive::usize = #bits;
+            type Bytes = <::modular_bitfield::private::checks::BitCount<#bits> as ::modular_bitfield::private::SpecifierBytes>::Bytes;
             type InOut = Self;
 
             #[inline]

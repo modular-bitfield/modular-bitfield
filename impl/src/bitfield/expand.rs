@@ -56,7 +56,7 @@ impl BitfieldStruct {
             };
 
             impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
-                const BITS: usize = #bits;
+                const BITS: ::core::primitive::usize = #bits;
 
                 type Bytes = <::modular_bitfield::private::checks::BitCount<{if #bits > 128 { 128 } else { #bits }}> as ::modular_bitfield::private::SpecifierBytes>::Bytes;
                 type InOut = Self;
@@ -78,7 +78,7 @@ impl BitfieldStruct {
                 ) -> ::core::result::Result<Self::InOut, ::modular_bitfield::error::InvalidBitPattern<Self::Bytes>>
                 {
                     use ::core::convert::TryFrom;
-                    let __bf_max_value: Self::Bytes = (0x01 as Self::Bytes)
+                    let __bf_max_value: Self::Bytes = (1 as Self::Bytes)
                         .checked_shl(u32::try_from(Self::BITS).unwrap())
                         .unwrap_or(<Self::Bytes>::MAX);
                     if bytes <= __bf_max_value {
@@ -256,7 +256,7 @@ impl BitfieldStruct {
         quote_spanned!(span=>
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::#check_ident for #ident #ty_generics #where_clause {
-                    type Size = ::modular_bitfield::private::checks::TotalSize<::modular_bitfield::private::checks::BitCount<{(#actual_bits) % 8usize}>>;
+                    type Size = ::modular_bitfield::private::checks::TotalSize<::modular_bitfield::private::checks::BitCount<{(#actual_bits) % 8}>>;
                 }
             };
         )
@@ -303,7 +303,7 @@ impl BitfieldStruct {
             #( #attrs )*
             #vis struct #ident #generics
             {
-                bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize],
+                bytes: [::core::primitive::u8; #next_divisible_by_8 / 8],
             }
         )
     }
@@ -323,7 +323,7 @@ impl BitfieldStruct {
                 #[must_use]
                 pub const fn new() -> Self {
                     Self {
-                        bytes: [0u8; #next_divisible_by_8 / 8usize],
+                        bytes: [0_u8; #next_divisible_by_8 / 8],
                     }
                 }
             }
@@ -404,8 +404,7 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
-        let bytes_ty =
-            quote_spanned!(span=> [::core::primitive::u8; #next_divisible_by_8 / 8usize]);
+        let bytes_ty = quote_spanned!(span=> [::core::primitive::u8; #next_divisible_by_8 / 8]);
         let (from_bytes, from_impl) = if config.filled_enabled() {
             (
                 quote_spanned!(span=>
@@ -670,7 +669,7 @@ impl BitfieldStruct {
                 &mut self,
                 new_val: <#ty as ::modular_bitfield::Specifier>::InOut
             ) -> ::core::result::Result<(), ::modular_bitfield::error::OutOfBounds> {
-                let __bf_base_bits: ::core::primitive::usize = 8usize * ::core::mem::size_of::<<#ty as ::modular_bitfield::Specifier>::Bytes>();
+                let __bf_base_bits: ::core::primitive::usize = ::core::mem::size_of::<<#ty as ::modular_bitfield::Specifier>::Bytes>() * 8;
                 let __bf_max_value: <#ty as ::modular_bitfield::Specifier>::Bytes = {
                     !0 >> (__bf_base_bits - <#ty as ::modular_bitfield::Specifier>::BITS)
                 };

@@ -91,10 +91,10 @@ where
         // Least-significant byte
         let stays_same = bytes[ls_byte]
             & (if ls_byte == ms_byte && msb_offset != 8 {
-                !((0x01 << msb_offset) - 1)
+                !((1 << msb_offset) - 1)
             } else {
                 0u8
-            } | ((0x01 << lsb_offset) - 1));
+            } | ((1 << lsb_offset) - 1));
         let overwrite = buffer.pop_bits(8 - lsb_offset);
         bytes[ls_byte] = stays_same | (overwrite << lsb_offset);
         if ms_byte - ls_byte >= 2 {
@@ -110,7 +110,7 @@ where
                 bytes[ms_byte] = buffer.pop_bits(msb_offset);
             } else {
                 // All bits that do not belong to this field should be preserved.
-                let stays_same = bytes[ms_byte] & !((0x01 << msb_offset) - 1);
+                let stays_same = bytes[ms_byte] & !((1 << msb_offset) - 1);
                 let overwrite = buffer.pop_bits(msb_offset);
                 bytes[ms_byte] = stays_same | overwrite;
             }
