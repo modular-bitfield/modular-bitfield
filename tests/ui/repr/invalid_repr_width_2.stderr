@@ -1,12 +1,11 @@
-error[E0277]: the trait bound `[(); 32]: IsU64Compatible` is not satisfied
- --> tests/ui/repr/invalid_repr_width_2.rs:3:1
+error[E0277]: the trait bound `BitCount<32>: IsU64Compatible` is not satisfied
+ --> tests/ui/repr/invalid_repr_width_2.rs:4:8
   |
-3 | #[bitfield]
-  | ^^^^^^^^^^^ the trait `IsU64Compatible` is not implemented for `[(); 32]`
+4 | #[repr(u64)] // Too many bits!
+  |        ^^^ the trait `IsU64Compatible` is not implemented for `BitCount<32>`
   |
-  = help: the trait `IsU64Compatible` is implemented for `[(); 64]`
+  = help: the trait `IsU64Compatible` is implemented for `BitCount<64>`
   = help: see issue #48214
-  = note: this error originates in the attribute macro `bitfield` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0308]: mismatched types
  --> tests/ui/repr/invalid_repr_width_2.rs:4:8

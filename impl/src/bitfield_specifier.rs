@@ -103,9 +103,13 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
 
     let check_discriminants = variants.iter().map(|ident| {
         let span = ident.span();
-        quote_spanned!(span =>
-            impl #impl_generics ::modular_bitfield::private::checks::CheckDiscriminantInRange<[(); Self::#ident as usize]> for #enum_ident #ty_generics #where_clause {
-                type CheckType = [(); ((Self::#ident as usize) < (0x01_usize << #bits)) as usize ];
+        quote_spanned!(span=>
+            impl #impl_generics ::modular_bitfield::private::checks::CheckDiscriminantInRange<
+                ::modular_bitfield::private::checks::BitCount<{Self::#ident as ::core::primitive::usize}>
+            > for #enum_ident #ty_generics #where_clause {
+                type CheckType = ::modular_bitfield::private::checks::BitCount<{
+                    ((Self::#ident as ::core::primitive::usize) < (0x01_usize << #bits)) as ::core::primitive::usize
+                }>;
             }
         )
     });

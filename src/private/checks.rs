@@ -32,9 +32,9 @@ macro_rules! impl_total_size_for {
     ( $(($n:expr, $name:ident)),* ) => {
         $(
             pub enum $name {}
-            impl private::Sealed for TotalSize<[(); $n]> {}
+            impl private::Sealed for TotalSize<BitCount<$n>> {}
             impl private::Sealed for $name {}
-            impl RenameSizeType for TotalSize<[(); $n]> {
+            impl RenameSizeType for TotalSize<BitCount<$n>> {
                 type CheckType = $name;
             }
         )*
@@ -114,13 +114,16 @@ pub trait DispatchTrueFalse: private::Sealed {
     type Out;
 }
 
-impl private::Sealed for [(); 0] {}
-impl DispatchTrueFalse for [(); 0] {
+/// Helper type for compile time evaluation of the number of bits.
+pub enum BitCount<const N: usize> {}
+
+impl private::Sealed for BitCount<0> {}
+impl DispatchTrueFalse for BitCount<0> {
     type Out = False;
 }
 
 // impl private::Sealed for [(); 1] {} // <-- Already implemented by `define_specifiers` macro!
-impl DispatchTrueFalse for [(); 1] {
+impl DispatchTrueFalse for BitCount<1> {
     type Out = True;
 }
 

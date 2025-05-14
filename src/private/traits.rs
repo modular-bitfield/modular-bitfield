@@ -33,8 +33,8 @@ pub trait IsU32Compatible: checks::private::Sealed {}
 pub trait IsU64Compatible: checks::private::Sealed {}
 pub trait IsU128Compatible: checks::private::Sealed {}
 
-impl IsU8Compatible for [(); 8] {}
-impl IsU16Compatible for [(); 16] {}
-impl IsU32Compatible for [(); 32] {}
-impl IsU64Compatible for [(); 64] {}
-impl IsU128Compatible for [(); 128] {}
+impl IsU8Compatible for checks::BitCount<8> {}
+impl IsU16Compatible for checks::BitCount<16> {}
+impl IsU32Compatible for checks::BitCount<32> {}
+impl IsU64Compatible for checks::BitCount<64> {}
+impl IsU128Compatible for checks::BitCount<128> {}

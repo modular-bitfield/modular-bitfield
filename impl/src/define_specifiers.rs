@@ -64,5 +64,6 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
         }
 
         impl crate::private::checks::private::Sealed for [(); #bits] {}
+        impl crate::private::checks::private::Sealed for crate::private::checks::BitCount<#bits> {}
     }
 }

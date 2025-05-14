@@ -4,7 +4,7 @@ use super::{
     BitfieldStruct,
 };
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote_spanned};
 use syn::{self, punctuated::Punctuated, spanned::Spanned as _, Token};
 
 impl BitfieldStruct {
@@ -52,7 +52,7 @@ impl BitfieldStruct {
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::CheckSpecifierHasAtMost128Bits for #ident #ty_generics #where_clause {
-                    type CheckType = [(); (#bits <= 128) as ::core::primitive::usize];
+                    type CheckType = ::modular_bitfield::private::checks::BitCount<{(#bits <= 128) as ::core::primitive::usize}>;
                 }
             };
 
@@ -233,15 +233,15 @@ impl BitfieldStruct {
             quote_spanned!(span => CheckDoesNotFillUnalignedBits)
         };
         let comparator = if config.filled_enabled() {
-            quote! { == }
+            quote_spanned!(span=> ==)
         } else {
-            quote! { > }
+            quote_spanned!(span=> >)
         };
         quote_spanned!(span=>
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::#check_ident for #ident #ty_generics #where_clause {
-                    type CheckType = [(); (#required_bits #comparator #actual_bits) as usize];
+                    type CheckType = ::modular_bitfield::private::checks::BitCount<{(#required_bits #comparator #actual_bits) as ::core::primitive::usize}>;
                 }
             };
         )
@@ -265,7 +265,7 @@ impl BitfieldStruct {
             #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::#check_ident for #ident #ty_generics #where_clause {
-                    type Size = ::modular_bitfield::private::checks::TotalSize<[(); (#actual_bits) % 8usize]>;
+                    type Size = ::modular_bitfield::private::checks::TotalSize<::modular_bitfield::private::checks::BitCount<{(#actual_bits) % 8usize}>>;
                 }
             };
         )
@@ -368,25 +368,25 @@ impl BitfieldStruct {
             let kind = &repr.value;
             let span = repr.span;
             let prim = match kind {
-                ReprKind::U8 => quote! { ::core::primitive::u8 },
-                ReprKind::U16 => quote! { ::core::primitive::u16 },
-                ReprKind::U32 => quote! { ::core::primitive::u32 },
-                ReprKind::U64 => quote! { ::core::primitive::u64 },
-                ReprKind::U128 => quote! { ::core::primitive::u128 },
+                ReprKind::U8 => quote_spanned!(span=> ::core::primitive::u8),
+                ReprKind::U16 => quote_spanned!(span=> ::core::primitive::u16),
+                ReprKind::U32 => quote_spanned!(span=> ::core::primitive::u32),
+                ReprKind::U64 => quote_spanned!(span=> ::core::primitive::u64),
+                ReprKind::U128 => quote_spanned!(span=> ::core::primitive::u128),
             };
             let actual_bits = self.generate_target_or_actual_bitfield_size(config);
             let trait_check_ident = match kind {
-                ReprKind::U8 => quote! { IsU8Compatible },
-                ReprKind::U16 => quote! { IsU16Compatible },
-                ReprKind::U32 => quote! { IsU32Compatible },
-                ReprKind::U64 => quote! { IsU64Compatible },
-                ReprKind::U128 => quote! { IsU128Compatible },
+                ReprKind::U8 => quote_spanned!(span=> IsU8Compatible),
+                ReprKind::U16 => quote_spanned!(span=> IsU16Compatible),
+                ReprKind::U32 => quote_spanned!(span=> IsU32Compatible),
+                ReprKind::U64 => quote_spanned!(span=> IsU64Compatible),
+                ReprKind::U128 => quote_spanned!(span=> IsU128Compatible),
             };
             quote_spanned!(span=>
                 #[allow(clippy::identity_op)]
                 impl #impl_generics ::core::convert::From<#prim> for #ident #ty_generics
                 where
-                    [(); #actual_bits]: ::modular_bitfield::private::#trait_check_ident,
+                    ::modular_bitfield::private::checks::BitCount<{#actual_bits}>: ::modular_bitfield::private::#trait_check_ident,
                     #where_predicates
                 {
                     #[inline]
@@ -398,7 +398,7 @@ impl BitfieldStruct {
                 #[allow(clippy::identity_op)]
                 impl #impl_generics ::core::convert::From<#ident #ty_generics> for #prim
                 where
-                    [(); #actual_bits]: ::modular_bitfield::private::#trait_check_ident,
+                    ::modular_bitfield::private::checks::BitCount<{#actual_bits}>: ::modular_bitfield::private::#trait_check_ident,
                     #where_predicates
                 {
                     #[inline]
