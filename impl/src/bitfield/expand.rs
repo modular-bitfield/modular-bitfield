@@ -489,27 +489,18 @@ impl BitfieldStruct {
             field,
             config,
         } = field_info;
-        let span = field.span();
-        let bits_check = match &config.bits {
-            Some(bits) => {
-                let ty = &field.ty;
-                let expected_bits = bits.value;
-                let expected_span = bits.span;
-                let actual_span = field.ty.span();
-                let actual_ty = quote_spanned!(actual_span=>
-                    ::modular_bitfield::private::checks::BitCount<{<#ty as ::modular_bitfield::Specifier>::BITS}>
-                );
-                Some(quote_spanned!(expected_span=>
-                    let _: #actual_ty = ::modular_bitfield::private::checks::BitCount::<{#expected_bits}>;
-                ))
-            }
-            None => None,
-        };
-        quote_spanned!(span=>
-            const _: () = {
-                #bits_check
-            };
-        )
+        config.bits.as_ref().map(|bits| {
+            let ty = &field.ty;
+            let expected_bits = bits.value;
+            let expected_span = bits.span;
+            let actual_span = field.ty.span();
+            let actual_ty = quote_spanned!(actual_span=>
+                ::modular_bitfield::private::checks::BitCount<{<#ty as ::modular_bitfield::Specifier>::BITS}>
+            );
+            quote_spanned!(expected_span=>
+                let _: #actual_ty = ::modular_bitfield::private::checks::BitCount::<{#expected_bits}>;
+            )
+        }).unwrap_or_default()
     }
 
     fn expand_getters_for_field(
