@@ -4,7 +4,7 @@ use super::{
     BitfieldStruct,
 };
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote_spanned};
+use quote::{format_ident, quote_spanned, ToTokens};
 use syn::{self, punctuated::Punctuated, spanned::Spanned as _, Token};
 
 impl BitfieldStruct {
@@ -49,14 +49,12 @@ impl BitfieldStruct {
         let next_divisible_by_8 = Self::next_divisible_by_8(&bits);
 
         Some(quote_spanned!(span=>
-            #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::CheckSpecifierHasAtMost128Bits for #ident #ty_generics #where_clause {
                     type CheckType = ::modular_bitfield::private::checks::BitCount<{(#bits <= 128) as ::core::primitive::usize}>;
                 }
             };
 
-            #[allow(clippy::identity_op)]
             impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
                 const BITS: usize = #bits;
 
@@ -172,7 +170,6 @@ impl BitfieldStruct {
     /// We generate the following tokens:
     ///
     /// ```no_compile
-    /// 0usize +
     /// <B8 as ::modular_bitfield::Specifier>::BITS +
     /// <B8 as ::modular_bitfield::Specifier>::BITS +
     /// <B8 as ::modular_bitfield::Specifier>::BITS +
@@ -182,22 +179,18 @@ impl BitfieldStruct {
     ///
     /// Which is a compile time evaluatable expression.
     fn generate_bitfield_size(&self) -> TokenStream2 {
-        let span = self.item_struct.span();
         self.item_struct
             .fields
             .iter()
-            .map(|field| {
+            .map(|field| -> syn::Expr {
                 let span = field.span();
                 let ty = &field.ty;
-                quote_spanned!(span=>
+                syn::parse_quote_spanned!(span=>
                     <#ty as ::modular_bitfield::Specifier>::BITS
                 )
             })
-            .fold(quote_spanned!(span=> 0usize), |lhs, rhs| {
-                quote_spanned!(span=>
-                    #lhs + #rhs
-                )
-            })
+            .collect::<Punctuated<syn::Expr, Token![+]>>()
+            .into_token_stream()
     }
 
     /// Generates the expression denoting the actual configured or implied bit width.
@@ -238,7 +231,6 @@ impl BitfieldStruct {
             quote_spanned!(span=> >)
         };
         quote_spanned!(span=>
-            #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::#check_ident for #ident #ty_generics #where_clause {
                     type CheckType = ::modular_bitfield::private::checks::BitCount<{(#required_bits #comparator #actual_bits) as ::core::primitive::usize}>;
@@ -262,7 +254,6 @@ impl BitfieldStruct {
             quote_spanned!(span=> CheckTotalSizeIsNotMultipleOf8)
         };
         quote_spanned!(span=>
-            #[allow(clippy::identity_op)]
             const _: () = {
                 impl #impl_generics ::modular_bitfield::private::checks::#check_ident for #ident #ty_generics #where_clause {
                     type Size = ::modular_bitfield::private::checks::TotalSize<::modular_bitfield::private::checks::BitCount<{(#actual_bits) % 8usize}>>;
@@ -310,7 +301,6 @@ impl BitfieldStruct {
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
         quote_spanned!(span=>
             #( #attrs )*
-            #[allow(clippy::identity_op)]
             #vis struct #ident #generics
             {
                 bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize],
@@ -329,7 +319,6 @@ impl BitfieldStruct {
             impl #impl_generics #ident #ty_generics #where_clause
             {
                 /// Returns an instance with zero initialized data.
-                #[allow(clippy::identity_op)]
                 #[allow(clippy::new_without_default)]
                 #[must_use]
                 pub const fn new() -> Self {
@@ -383,7 +372,6 @@ impl BitfieldStruct {
                 ReprKind::U128 => quote_spanned!(span=> IsU128Compatible),
             };
             quote_spanned!(span=>
-                #[allow(clippy::identity_op)]
                 impl #impl_generics ::core::convert::From<#prim> for #ident #ty_generics
                 where
                     ::modular_bitfield::private::checks::BitCount<{#actual_bits}>: ::modular_bitfield::private::#trait_check_ident,
@@ -395,7 +383,6 @@ impl BitfieldStruct {
                     }
                 }
 
-                #[allow(clippy::identity_op)]
                 impl #impl_generics ::core::convert::From<#ident #ty_generics> for #prim
                 where
                     ::modular_bitfield::private::checks::BitCount<{#actual_bits}>: ::modular_bitfield::private::#trait_check_ident,
@@ -424,14 +411,12 @@ impl BitfieldStruct {
                 quote_spanned!(span=>
                     /// Converts the given bytes directly into the bitfield struct.
                     #[inline]
-                    #[allow(clippy::identity_op)]
                     #[must_use]
                     pub const fn from_bytes(bytes: #bytes_ty) -> Self {
                         Self { bytes }
                     }
                 ),
                 quote_spanned!(span=>
-                    #[allow(clippy::identity_op)]
                     impl #impl_generics ::core::convert::From<#bytes_ty> for #ident #ty_generics #where_clause {
                         fn from(bytes: #bytes_ty) -> Self {
                             Self::from_bytes(bytes)
@@ -448,11 +433,11 @@ impl BitfieldStruct {
                     ///
                     /// If the given bytes contain bits at positions that are undefined for `Self`.
                     #[inline]
-                    #[allow(clippy::identity_op)]
                     pub fn from_bytes(
                         bytes: #bytes_ty
                     ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
-                        if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) < (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
+                        #[allow(clippy::identity_op)]
+                        if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8) - 1]) < (1 << (8 - (#next_divisible_by_8 - (#size)))) {
                             ::core::result::Result::Ok(Self { bytes })
                         } else {
                             ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
@@ -460,7 +445,6 @@ impl BitfieldStruct {
                     }
                 ),
                 quote_spanned!(span=>
-                    #[allow(clippy::identity_op)]
                     impl #impl_generics ::core::convert::TryFrom<#bytes_ty> for #ident #ty_generics #where_clause {
                         type Error = ::modular_bitfield::error::OutOfBounds;
 
@@ -475,7 +459,6 @@ impl BitfieldStruct {
         quote_spanned!(span=>
             #from_impl
 
-            #[allow(clippy::identity_op)]
             impl #impl_generics ::core::convert::From<#ident #ty_generics> for #bytes_ty #where_clause {
                 #[inline]
                 fn from(bytes: #ident #ty_generics) -> Self {
@@ -491,7 +474,6 @@ impl BitfieldStruct {
                 /// The returned byte array is layed out in the same way as described
                 /// [here](https://docs.rs/modular-bitfield/#generated-structure).
                 #[inline]
-                #[allow(clippy::identity_op)]
                 pub const fn into_bytes(self) -> #bytes_ty {
                     self.bytes
                 }
@@ -533,7 +515,7 @@ impl BitfieldStruct {
 
     fn expand_getters_for_field(
         &self,
-        offset: &Punctuated<syn::Expr, syn::Token![+]>,
+        offset: &TokenStream2,
         info: &FieldInfo<'_>,
     ) -> Option<TokenStream2> {
         let FieldInfo {
@@ -599,7 +581,7 @@ impl BitfieldStruct {
 
     fn expand_setters_for_field(
         &self,
-        offset: &Punctuated<syn::Expr, syn::Token![+]>,
+        offset: &TokenStream2,
         info: &FieldInfo<'_>,
     ) -> Option<TokenStream2> {
         let FieldInfo {
@@ -717,13 +699,18 @@ impl BitfieldStruct {
         let field = info.field;
         let span = field.span();
         let ty = &field.ty;
-        let getters = self.expand_getters_for_field(offset, info);
-        let setters = self.expand_setters_for_field(offset, info);
+        let offset_ts = if offset.is_empty() {
+            quote_spanned!(span=> 0)
+        } else {
+            offset.to_token_stream()
+        };
+        let getters = self.expand_getters_for_field(&offset_ts, info);
+        let setters = self.expand_setters_for_field(&offset_ts, info);
         let getters_and_setters = quote_spanned!(span=>
             #getters
             #setters
         );
-        offset.push(syn::parse_quote! { <#ty as ::modular_bitfield::Specifier>::BITS });
+        offset.push(syn::parse_quote_spanned!(span=> <#ty as ::modular_bitfield::Specifier>::BITS));
         getters_and_setters
     }
 
@@ -731,11 +718,7 @@ impl BitfieldStruct {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
-        let mut offset = {
-            let mut offset = Punctuated::<syn::Expr, Token![+]>::new();
-            offset.push(syn::parse_quote! { 0usize });
-            offset
-        };
+        let mut offset = Punctuated::<syn::Expr, Token![+]>::new();
         let bits_checks = self
             .field_infos(config)
             .map(|field_info| Self::expand_bits_checks_for_field(field_info));
