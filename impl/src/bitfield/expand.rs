@@ -650,7 +650,7 @@ impl BitfieldStruct {
             #[allow(dead_code)]
             #( #retained_attrs )*
             #vis fn #set_ident(&mut self, new_val: <#ty as ::modular_bitfield::Specifier>::InOut) {
-                self.#set_checked_ident(new_val).expect(#set_assert_msg)
+                self.#set_checked_ident(new_val).expect(#set_assert_msg);
             }
 
             #[doc = #checked_setter_docs]
