@@ -194,7 +194,7 @@ impl BitfieldStruct {
                 )
             })
             .fold(quote_spanned!(span=> 0usize), |lhs, rhs| {
-                quote_spanned!(span =>
+                quote_spanned!(span=>
                     #lhs + #rhs
                 )
             })
@@ -228,9 +228,9 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let actual_bits = self.generate_bitfield_size();
         let check_ident = if config.filled_enabled() {
-            quote_spanned!(span => CheckFillsUnalignedBits)
+            quote_spanned!(span=> CheckFillsUnalignedBits)
         } else {
-            quote_spanned!(span => CheckDoesNotFillUnalignedBits)
+            quote_spanned!(span=> CheckDoesNotFillUnalignedBits)
         };
         let comparator = if config.filled_enabled() {
             quote_spanned!(span=> ==)
@@ -257,9 +257,9 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let actual_bits = self.generate_bitfield_size();
         let check_ident = if config.filled_enabled() {
-            quote_spanned!(span => CheckTotalSizeMultipleOf8)
+            quote_spanned!(span=> CheckTotalSizeMultipleOf8)
         } else {
-            quote_spanned!(span => CheckTotalSizeIsNotMultipleOf8)
+            quote_spanned!(span=> CheckTotalSizeIsNotMultipleOf8)
         };
         quote_spanned!(span=>
             #[allow(clippy::identity_op)]
@@ -514,7 +514,7 @@ impl BitfieldStruct {
                 let ty = &field.ty;
                 let expected_bits = bits.value;
                 let span = bits.span;
-                Some(quote_spanned!(span =>
+                Some(quote_spanned!(span=>
                     let _: ::modular_bitfield::private::checks::BitsCheck::<[(); #expected_bits]> =
                         ::modular_bitfield::private::checks::BitsCheck::<[(); #expected_bits]>{
                             arr: [(); <#ty as ::modular_bitfield::Specifier>::BITS]
