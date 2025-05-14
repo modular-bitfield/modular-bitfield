@@ -3,11 +3,22 @@
 
 #![no_implicit_prelude]
 
-use ::modular_bitfield::prelude::*;
+struct OverrideLanguagePrelude;
+macro_rules! override_language_primitives {
+    ($($ty:ident),* $(,)?) => {
+        $(
+            #[allow(non_camel_case_types)]
+            type $ty = OverrideLanguagePrelude;
+        )*
+    }
+}
+override_language_primitives!(
+    bool, char, str, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, isize, usize, f32, f64
+);
 
 #[test]
 fn no_implicit_prelude() {
-    #[bitfield]
+    #[::modular_bitfield::bitfield]
     pub struct TestBitfield {
         a: ::core::primitive::bool,
         b: ::modular_bitfield::specifiers::B3,
@@ -15,7 +26,7 @@ fn no_implicit_prelude() {
         d: ::modular_bitfield::specifiers::B24,
     }
 
-    #[derive(Specifier, Debug)]
+    #[derive(::modular_bitfield::Specifier, Debug)]
     pub enum TestSpecifier {
         A = 0,
         B = 1,
@@ -24,7 +35,7 @@ fn no_implicit_prelude() {
 
 #[test]
 fn no_implicit_prelude_2() {
-    #[bitfield]
+    #[::modular_bitfield::bitfield]
     #[derive(Specifier, Debug)]
     pub struct TestBitfield {
         a: ::core::primitive::bool,

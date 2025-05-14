@@ -77,9 +77,10 @@ impl BitfieldStruct {
                     bytes: Self::Bytes,
                 ) -> ::core::result::Result<Self::InOut, ::modular_bitfield::error::InvalidBitPattern<Self::Bytes>>
                 {
-                    use ::core::convert::TryFrom;
+                    // Truncation of BITS is always valid due to maximum of 128
+                    #[allow(clippy::cast_possible_truncation)]
                     let __bf_max_value: Self::Bytes = (1 as Self::Bytes)
-                        .checked_shl(u32::try_from(Self::BITS).unwrap())
+                        .checked_shl(Self::BITS as ::core::primitive::u32)
                         .unwrap_or(<Self::Bytes>::MAX);
                     if bytes <= __bf_max_value {
                         let __bf_bytes = bytes.to_le_bytes();
