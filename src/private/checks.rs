@@ -122,7 +122,7 @@ impl DispatchTrueFalse for BitCount<0> {
     type Out = False;
 }
 
-// impl private::Sealed for [(); 1] {} // <-- Already implemented by `define_specifiers` macro!
+// impl private::Sealed for BitCount<1> {} // <-- Already implemented by `define_specifiers` macro!
 impl DispatchTrueFalse for BitCount<1> {
     type Out = True;
 }

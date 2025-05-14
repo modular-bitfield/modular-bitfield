@@ -1,4 +1,4 @@
-use crate::private::SpecifierBytes;
+use crate::private::{checks::BitCount, SpecifierBytes};
 
 pub trait ArrayBytesConversion {
     type Array;
@@ -11,7 +11,7 @@ pub trait ArrayBytesConversion {
 macro_rules! impl_array_bytes_conversion_for_prim {
     ( $( $prim:ty ),* ) => {
         $(
-            impl ArrayBytesConversion for [(); ::core::mem::size_of::<$prim>() * 8] {
+            impl ArrayBytesConversion for BitCount<{::core::mem::size_of::<$prim>() * 8}> {
                 type Array = [u8; ::core::mem::size_of::<$prim>()];
                 type Bytes = <Self as SpecifierBytes>::Bytes;
 
@@ -20,7 +20,7 @@ macro_rules! impl_array_bytes_conversion_for_prim {
                 }
 
                 fn array_into_bytes(bytes: Self::Array) -> Self::Bytes {
-                    <[(); ::core::mem::size_of::<$prim>() * 8] as SpecifierBytes>::Bytes::from_le_bytes(bytes)
+                    <BitCount<{::core::mem::size_of::<$prim>() * 8}> as SpecifierBytes>::Bytes::from_le_bytes(bytes)
                 }
             }
         )*
@@ -31,7 +31,7 @@ impl_array_bytes_conversion_for_prim!(u8, u16, u32, u64, u128);
 macro_rules! impl_array_bytes_conversion_for_size {
     ( $( $size:literal ),* ) => {
         $(
-            impl ArrayBytesConversion for [(); $size] {
+            impl ArrayBytesConversion for BitCount<$size> {
                 type Array = [u8; $size / 8];
                 type Bytes = <Self as SpecifierBytes>::Bytes;
 
