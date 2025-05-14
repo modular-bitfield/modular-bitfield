@@ -115,7 +115,7 @@ pub trait DispatchTrueFalse: private::Sealed {
 }
 
 /// Helper type for compile time evaluation of the number of bits.
-pub enum BitCount<const N: usize> {}
+pub struct BitCount<const N: usize>;
 
 impl private::Sealed for BitCount<0> {}
 impl DispatchTrueFalse for BitCount<0> {
@@ -144,12 +144,6 @@ where
     <Self::CheckType as DispatchTrueFalse>::Out: SpecifierHasAtMost128Bits,
 {
     type CheckType: DispatchTrueFalse;
-}
-
-/// Helper type to check whether a bitfield member aligns to
-/// the specified bits.
-pub struct BitsCheck<A> {
-    pub arr: A,
 }
 
 pub trait CheckFillsUnalignedBits

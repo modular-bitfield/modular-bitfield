@@ -513,12 +513,13 @@ impl BitfieldStruct {
             Some(bits) => {
                 let ty = &field.ty;
                 let expected_bits = bits.value;
-                let span = bits.span;
-                Some(quote_spanned!(span=>
-                    let _: ::modular_bitfield::private::checks::BitsCheck::<[(); #expected_bits]> =
-                        ::modular_bitfield::private::checks::BitsCheck::<[(); #expected_bits]>{
-                            arr: [(); <#ty as ::modular_bitfield::Specifier>::BITS]
-                        };
+                let expected_span = bits.span;
+                let actual_span = field.ty.span();
+                let actual_ty = quote_spanned!(actual_span=>
+                    ::modular_bitfield::private::checks::BitCount<{<#ty as ::modular_bitfield::Specifier>::BITS}>
+                );
+                Some(quote_spanned!(expected_span=>
+                    let _: #actual_ty = ::modular_bitfield::private::checks::BitCount::<{#expected_bits}>;
                 ))
             }
             None => None,
