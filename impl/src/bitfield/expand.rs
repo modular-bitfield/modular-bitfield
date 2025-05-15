@@ -661,17 +661,17 @@ impl BitfieldStruct {
                 &mut self,
                 new_val: <#ty as ::modular_bitfield::Specifier>::InOut
             ) -> ::core::result::Result<(), ::modular_bitfield::error::OutOfBounds> {
-                let __bf_base_bits: ::core::primitive::usize = ::core::mem::size_of::<<#ty as ::modular_bitfield::Specifier>::Bytes>() * 8;
-                let __bf_max_value: <#ty as ::modular_bitfield::Specifier>::Bytes = {
-                    !0 >> (__bf_base_bits - <#ty as ::modular_bitfield::Specifier>::BITS)
-                };
-                let __bf_spec_bits: ::core::primitive::usize = <#ty as ::modular_bitfield::Specifier>::BITS;
-                let __bf_raw_val: <#ty as ::modular_bitfield::Specifier>::Bytes = {
-                    <#ty as ::modular_bitfield::Specifier>::into_bytes(new_val)
-                }?;
-                // We compare base bits with spec bits to drop this condition
-                // if there cannot be invalid inputs.
-                if __bf_base_bits == __bf_spec_bits || __bf_raw_val <= __bf_max_value {
+                const __BF_BASE_BITS: ::core::primitive::usize =
+                    ::core::mem::size_of::<<#ty as ::modular_bitfield::Specifier>::Bytes>() * 8;
+                const __BF_MAX_VALUE: <#ty as ::modular_bitfield::Specifier>::Bytes =
+                    !0 >> (__BF_BASE_BITS - <#ty as ::modular_bitfield::Specifier>::BITS);
+                let __bf_raw_val =
+                    <#ty as ::modular_bitfield::Specifier>::into_bytes(new_val)?;
+                // Value comparison to const guarantees the optimiser eliminates
+                // branching entirely when the maximum value is the same as the
+                // maximum value of the underlying type.
+                #[allow(clippy::absurd_extreme_comparisons)]
+                if __bf_raw_val <= __BF_MAX_VALUE {
                     ::modular_bitfield::private::write_specifier::<#ty>(&mut self.bytes[..], #offset, __bf_raw_val);
                     ::core::result::Result::Ok(())
                 } else {
