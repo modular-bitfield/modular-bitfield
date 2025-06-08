@@ -16,4 +16,4 @@ error: conflicting `filled = false` here
  --> tests/ui/repr/invalid_repr_unfilled.rs:3:12
   |
 3 | #[bitfield(filled = false)]
-  |            ^^^^^^
+  |            ^^^^^^^^^^^^^^

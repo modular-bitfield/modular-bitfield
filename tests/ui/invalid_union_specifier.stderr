@@ -1,5 +1,9 @@
 error: unions are not supported as bitfield specifiers
  --> tests/ui/invalid_union_specifier.rs:4:1
   |
-4 | pub union InvalidUnionSpecifier {
-  | ^^^
+4 | / pub union InvalidUnionSpecifier {
+5 | |     a: bool,
+6 | |     b: B7,
+7 | |     c: u8,
+8 | | }
+  | |_^

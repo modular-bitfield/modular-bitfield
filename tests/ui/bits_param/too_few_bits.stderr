@@ -1,8 +1,11 @@
 error[E0277]: the trait bound `False: FillsUnalignedBits` is not satisfied
  --> tests/ui/bits_param/too_few_bits.rs:4:1
   |
-4 | pub struct SignInteger {
-  | ^^^ the trait `FillsUnalignedBits` is not implemented for `False`
+4 | / pub struct SignInteger {
+5 | |     sign: bool,
+6 | |     value: B31,
+7 | | }
+  | |_^ the trait `FillsUnalignedBits` is not implemented for `False`
   |
   = help: the trait `FillsUnalignedBits` is implemented for `True`
 note: required by a bound in `CheckFillsUnalignedBits`
@@ -20,8 +23,11 @@ note: required by a bound in `CheckFillsUnalignedBits`
 error[E0277]: the trait bound `False: FillsUnalignedBits` is not satisfied
  --> tests/ui/bits_param/too_few_bits.rs:4:1
   |
-4 | pub struct SignInteger {
-  | ^^^ the trait `FillsUnalignedBits` is not implemented for `False`
+4 | / pub struct SignInteger {
+5 | |     sign: bool,
+6 | |     value: B31,
+7 | | }
+  | |_^ the trait `FillsUnalignedBits` is not implemented for `False`
   |
   = help: the trait `FillsUnalignedBits` is implemented for `True`
 note: required by a bound in `CheckFillsUnalignedBits::CheckType`
