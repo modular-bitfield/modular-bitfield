@@ -1,0 +1,5 @@
+error: encountered invalid format for #[default(...)] field attribute, expected #[default(expression)]
+ --> tests/ui/default/invalid_default_format.rs:5:7
+  |
+5 |     #[default]
+  |       ^^^^^^^

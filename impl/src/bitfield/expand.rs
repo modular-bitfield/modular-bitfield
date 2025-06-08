@@ -327,27 +327,85 @@ impl BitfieldStruct {
         )
     }
 
-    /// Generates the constructor for the bitfield that initializes all bytes to zero.
+    /// Generates the constructor for the bitfield that initializes all bytes to zero
+    /// and applies any default values specified with #[default(...)].
     fn generate_constructor(&self, config: &Config) -> TokenStream2 {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
-        quote_spanned!(span=>
-            impl #impl_generics #ident #ty_generics #where_clause
-            {
-                /// Returns an instance with zero initialized data.
-                #[allow(clippy::identity_op)]
-                #[allow(clippy::new_without_default)]
-                #[must_use]
-                pub const fn new() -> Self {
-                    Self {
-                        bytes: [0u8; #next_divisible_by_8 / 8usize],
+
+        // Check if any fields have default values
+        let has_defaults = self
+            .field_infos(config)
+            .any(|info| info.config.default.is_some());
+
+        if has_defaults {
+            // Generate non-const constructor with default values
+            let default_assignments = self
+                .field_infos(config)
+                .filter_map(|info| {
+                    let field_config = &info.config;
+                    if let Some(default_config) = &field_config.default {
+                        // Skip fields that have skip attribute since they don't have setters
+                        if field_config.skip_setters() {
+                            return None;
+                        }
+                        let default_value = &default_config.value;
+                        let field_ident = info.ident_frag();
+                        let setter_name = format_ident!("set_{}", field_ident);
+                        Some(quote_spanned!(default_config.span=>
+                            result.#setter_name(#default_value);
+                        ))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            quote_spanned!(span=>
+                impl #impl_generics #ident #ty_generics #where_clause
+                {
+                    /// Returns an instance with zero initialized data.
+                    #[allow(clippy::identity_op)]
+                    #[allow(clippy::new_without_default)]
+                    #[must_use]
+                    pub const fn new() -> Self {
+                        Self {
+                            bytes: [0u8; #next_divisible_by_8 / 8usize],
+                        }
+                    }
+
+                    /// Returns an instance with zero initialized data and any specified default values applied.
+                    #[allow(clippy::identity_op)]
+                    #[must_use]
+                    pub fn new_with_defaults() -> Self {
+                        let mut result = Self {
+                            bytes: [0u8; #next_divisible_by_8 / 8usize],
+                        };
+                        #( #default_assignments )*
+                        result
                     }
                 }
-            }
-        )
+            )
+        } else {
+            // Original const constructor when no defaults
+            quote_spanned!(span=>
+                impl #impl_generics #ident #ty_generics #where_clause
+                {
+                    /// Returns an instance with zero initialized data.
+                    #[allow(clippy::identity_op)]
+                    #[allow(clippy::new_without_default)]
+                    #[must_use]
+                    pub const fn new() -> Self {
+                        Self {
+                            bytes: [0u8; #next_divisible_by_8 / 8usize],
+                        }
+                    }
+                }
+            )
+        }
     }
 
     /// Generates the compile-time assertion if the optional `byte` parameter has been set.

@@ -9,6 +9,8 @@ By default this generates the following API:
     1. `new()`: Initializes all bits to 0 even if 0 bits may be invalid.
        Note that invalid bit patterns are supported in that getters and setters will
        be protecting accesses.
+    2. `new_with_defaults()`: Generated when any field has a `#[default(...)]` attribute.
+       Initializes fields with their specified default values, with all other bits set to 0.
 
 - **Getters:**
 
@@ -177,6 +179,47 @@ pub struct Sparse {
     #[skip] __: B10,
 }
 ```
+
+## Field Parameter: `#[default(...)]`
+
+The `#[default(...)]` attribute allows you to specify a default value for a field.
+When using this attribute, an additional constructor `new_with_defaults()` is generated
+that initializes the bitfield with the specified default values.
+
+### Example
+
+```
+# use modular_bitfield::prelude::*;
+#[bitfield]
+pub struct Config {
+    enabled: bool,
+    #[default(true)]
+    auto_restart: bool,
+    #[default(5)]
+    retry_count: B6,
+    #[default(0xFF)]
+    flags: B8,
+}
+
+// Create with all zeros
+let config1 = Config::new();
+assert_eq!(config1.auto_restart(), false);
+assert_eq!(config1.retry_count(), 0);
+assert_eq!(config1.flags(), 0);
+
+// Create with default values applied
+let config2 = Config::new_with_defaults();
+assert_eq!(config2.auto_restart(), true);
+assert_eq!(config2.retry_count(), 5);
+assert_eq!(config2.flags(), 0xFF);
+```
+
+### Limitations
+
+- The `#[default(...)]` attribute cannot be used on fields that skip setter generation
+  (i.e., fields marked with `#[skip]` or `#[skip(setters)]`).
+- Default values must be valid for the field's type and bit width.
+- The standard `new()` constructor remains available and always initializes all bits to zero.
 
 # Features
 

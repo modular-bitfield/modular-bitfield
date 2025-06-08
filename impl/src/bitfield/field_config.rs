@@ -10,6 +10,8 @@ pub struct FieldConfig {
     pub bits: Option<ConfigValue<usize>>,
     /// An encountered `#[skip]` attribute on a field.
     pub skip: Option<ConfigValue<SkipWhich>>,
+    /// An encountered `#[default(...)]` attribute on a field.
+    pub default: Option<ConfigValue<syn::Expr>>,
 }
 
 /// Controls which parts of the code generation to skip.
@@ -132,5 +134,29 @@ impl FieldConfig {
         self.skip
             .as_ref()
             .is_some_and(|config| SkipWhich::skip_getters(config.value))
+    }
+
+    /// Sets the `#[default(...)]` if found for a `#[bitfield]` annotated field.
+    ///
+    /// # Errors
+    ///
+    /// If previously already registered a `#[default(...)]`.
+    pub fn set_default(&mut self, value: syn::Expr, span: Span) -> Result<(), syn::Error> {
+        match self.default {
+            Some(ref previous) => {
+                return Err(format_err!(
+                    span,
+                    "encountered duplicate `#[default(...)]` attribute for field"
+                )
+                .into_combine(format_err!(
+                    previous.span,
+                    "duplicate `#[default(...)]` here"
+                )))
+            }
+            None => {
+                self.default = Some(ConfigValue { value, span });
+            }
+        }
+        Ok(())
     }
 }

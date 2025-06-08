@@ -1,5 +1,6 @@
 mod bits_param;
 mod bytes_param;
+mod default;
 mod derive_bitfield_specifier;
 mod derive_debug;
 mod derive_specifier;
