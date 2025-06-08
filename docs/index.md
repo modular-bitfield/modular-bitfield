@@ -336,6 +336,84 @@ data.set_status(Status::Green);
 assert_eq!(data.status_or_err(), Ok(Status::Green));
 ```
 
+#### Example: Enum Data Variants
+
+Enums can contain data variants when deriving `Specifier`. All enum bits are used for the actual data,
+and you track which variant is active using a separate field:
+
+```
+# use modular_bitfield::prelude::*;
+#
+// Enum with both unit and data variants
+#[derive(Specifier, Debug, PartialEq)]
+#[bits = 16]  // All 16 bits available for data
+enum Event {
+    // Unit variants (no data)
+    Startup,
+    Shutdown,
+    // Data variants (each uses all 16 bits for their data)
+    Error(u16),    // Error code (0-65535, includes HTTP codes like 404)
+    Warning(u16),  // Warning level (0-65535)
+}
+
+// Use the enum in a bitfield - track which variant separately
+#[bitfield]
+pub struct EventLog {
+    timestamp: B16,  // 16 bits
+    event_type: B4,  // 4 bits - YOU track which variant this is
+    #[bits = 16]
+    event_data: Event,  // 16 bits - the actual event data
+    padding: B4,     // 4 bits - Total: 16 + 4 + 16 + 4 = 40 bits (multiple of 8)
+}
+
+// Usage - you decide which variant based on your event_type
+let log = EventLog::new()
+    .with_timestamp(12345)
+    .with_event_type(2)  // You're storing an Error
+    .with_event_data(Event::Error(404))  // HTTP error code
+    .with_padding(0);
+
+// You handle determining the variant type
+match log.event_type() {
+    2 => println!("Error occurred"),
+    3 => println!("Warning issued"),
+    0 => println!("System started"),
+    1 => println!("System stopped"),
+    _ => println!("Unknown event"),
+}
+```
+
+Key requirements for enum data variants:
+- All data types must implement `Specifier`
+- All data variants must have the same bit size as the enum total
+- Total enum size must be specified with `#[bits = N]`
+- You must track which variant is active in a separate field
+
+#### Example: External Discrimination
+
+Data variants use external discrimination for maximum efficiency:
+
+```
+# use modular_bitfield::prelude::*;
+#
+#[derive(Specifier, Debug, PartialEq)]
+#[bits = 8]  // All 8 bits for data, no internal discrimination
+enum Command {
+    Read(u8),     // All 8 bits for data
+    Write(u8),    // All 8 bits for data
+    Delete(u8),   // All 8 bits for data
+}
+
+// External discrimination via separate field
+#[bitfield]
+struct Message {
+    command_type: B4,  // External discriminant (0=Read, 1=Write, 2=Delete)
+    #[bits = 8]
+    command: Command,  // Pure union - no internal discrimination
+    padding: B4,
+}
+```
+
 ## Generated Implementations
 
 For the example `#[bitfield]` struct the following implementations are going to be generated:

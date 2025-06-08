@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned as _;
-use crate::utils::calculate_discriminant_bits;
 
 pub fn generate(input: TokenStream2) -> TokenStream2 {
     match generate_or_error(input) {
@@ -35,32 +34,27 @@ fn generate_or_error(input: TokenStream2) -> syn::Result<TokenStream2> {
 
 enum VariantType {
     Unit,                           // No data
-    Data(syn::Type),               // Has data of specified type
+    Data(Box<syn::Type>),          // Has data of specified type
 }
 
 struct EnumVariant {
     name: syn::Ident,
     variant_type: VariantType,
-    discriminant: usize,           // Auto-assigned index
 }
 
 struct EnumAnalysis {
     variants: Vec<EnumVariant>,
     total_bits: usize,
-    discriminant_bits: usize,      // Auto-calculated or manual
-    data_bits: usize,              // total_bits - discriminant_bits
     has_data_variants: bool,       // True if any variant has data
 }
 
 struct Attributes {
     bits: Option<usize>,
-    discriminant_bits: Option<usize>,
 }
 
 fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
     let mut attributes = Attributes { 
-        bits: None, 
-        discriminant_bits: None 
+        bits: None,
     };
     
     for attr in attrs {
@@ -84,26 +78,6 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                     "could not parse 'bits' attribute",
                 ));
             };
-        } else if attr.path().is_ident("discriminant_bits") {
-            if attributes.discriminant_bits.is_some() {
-                return Err(format_err_spanned!(
-                    attr,
-                    "More than one 'discriminant_bits' attribute is not permitted",
-                ));
-            }
-            let meta = attr.meta.require_name_value()?;
-            attributes.discriminant_bits = if let syn::Expr::Lit(syn::ExprLit {
-                lit: syn::Lit::Int(lit),
-                ..
-            }) = &meta.value
-            {
-                Some(lit.base10_parse::<usize>()?)
-            } else {
-                return Err(format_err_spanned!(
-                    attr,
-                    "could not parse 'discriminant_bits' attribute",
-                ));
-            };
         }
     }
     Ok(attributes)
@@ -111,34 +85,24 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
 
 fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<EnumAnalysis> {
     let span = input.span();
-    let variant_count = input.variants.len();
     
     // Check if any variants have data
     let has_data_variants = input.variants.iter()
         .any(|v| !matches!(v.fields, syn::Fields::Unit));
     
     if has_data_variants {
-        // New logic for data variants - require explicit bits
+        // Data variants require explicit bits specification
         let total_bits = attributes.bits.ok_or_else(|| {
             format_err!(span, "enums with data variants must specify #[bits = N]")
         })?;
         
-        let discriminant_bits = attributes.discriminant_bits
-            .unwrap_or_else(|| calculate_discriminant_bits(variant_count));
-        
-        let data_bits = total_bits.checked_sub(discriminant_bits)
-            .ok_or_else(|| {
-                format_err!(span, "not enough bits for discriminant: need {} bits for {} variants, but only {} total bits specified", 
-                    discriminant_bits, variant_count, total_bits)
-            })?;
-        
-        // Classify each variant and assign discriminants
-        let variants = input.variants.iter().enumerate()
-            .map(|(i, variant)| {
+        // Classify each variant
+        let variants = input.variants.iter()
+            .map(|variant| {
                 let variant_type = match &variant.fields {
                     syn::Fields::Unit => VariantType::Unit,
                     syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-                        VariantType::Data(fields.unnamed.first().unwrap().ty.clone())
+                        VariantType::Data(Box::new(fields.unnamed.first().unwrap().ty.clone()))
                     }
                     syn::Fields::Named(_) => {
                         return Err(format_err_spanned!(
@@ -157,7 +121,6 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
                 Ok(EnumVariant {
                     name: variant.ident.clone(),
                     variant_type,
-                    discriminant: i,
                 })
             })
             .collect::<syn::Result<Vec<_>>>()?;
@@ -165,12 +128,11 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
         Ok(EnumAnalysis {
             variants,
             total_bits,
-            discriminant_bits,
-            data_bits,
             has_data_variants: true,
         })
     } else {
-        // Existing logic for unit-only enums
+        // Unit-only enums (existing logic)
+        let variant_count = input.variants.len();
         let total_bits = if let Some(bits) = attributes.bits {
             bits
         } else {
@@ -192,12 +154,11 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
             }
         };
         
-        let variants = input.variants.iter().enumerate()
-            .map(|(i, variant)| {
+        let variants = input.variants.iter()
+            .map(|variant| {
                 Ok(EnumVariant {
                     name: variant.ident.clone(),
                     variant_type: VariantType::Unit,
-                    discriminant: i,
                 })
             })
             .collect::<syn::Result<Vec<_>>>()?;
@@ -205,15 +166,12 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
         Ok(EnumAnalysis {
             variants,
             total_bits,
-            discriminant_bits: total_bits, // For unit enums, all bits are discriminant
-            data_bits: 0,
             has_data_variants: false,
         })
     }
 }
 
 fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
-    let span = input.span();
     let attributes = parse_attrs(&input.attrs)?;
     let enum_ident = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -222,11 +180,11 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     let analysis = analyze_enum(input, &attributes)?;
 
     if analysis.has_data_variants {
-        // Generate code for enums with data variants
-        generate_enum_with_data_variants(input, &analysis, enum_ident, impl_generics, ty_generics, where_clause)
+        // Generate code for enums with data variants - external discrimination
+        generate_enum_with_data_variants(&analysis, enum_ident, &impl_generics, &ty_generics, where_clause)
     } else {
         // Generate code for unit-only enums (existing logic)
-        generate_unit_enum(input, &analysis, enum_ident, impl_generics, ty_generics, where_clause)
+        Ok(generate_unit_enum(input, &analysis, enum_ident, &impl_generics, &ty_generics, where_clause))
     }
 }
 
@@ -234,10 +192,10 @@ fn generate_unit_enum(
     input: &syn::ItemEnum,
     analysis: &EnumAnalysis,
     enum_ident: &syn::Ident,
-    impl_generics: syn::ImplGenerics,
-    ty_generics: syn::TypeGenerics,
+    impl_generics: &syn::ImplGenerics<'_>,
+    ty_generics: &syn::TypeGenerics<'_>,
     where_clause: Option<&syn::WhereClause>,
-) -> syn::Result<TokenStream2> {
+) -> TokenStream2 {
     let span = input.span();
     let bits = analysis.total_bits;
 
@@ -262,7 +220,7 @@ fn generate_unit_enum(
         )
     });
 
-    Ok(quote_spanned!(span=>
+    quote_spanned!(span=>
         #( #check_discriminants )*
 
         impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
@@ -287,21 +245,18 @@ fn generate_unit_enum(
                 }
             }
         }
-    ))
+    )
 }
 
 fn generate_enum_with_data_variants(
-    input: &syn::ItemEnum,
     analysis: &EnumAnalysis,
     enum_ident: &syn::Ident,
-    impl_generics: syn::ImplGenerics,
-    ty_generics: syn::TypeGenerics,
+    impl_generics: &syn::ImplGenerics<'_>,
+    ty_generics: &syn::TypeGenerics<'_>,
     where_clause: Option<&syn::WhereClause>,
 ) -> syn::Result<TokenStream2> {
-    let span = input.span();
+    let span = enum_ident.span();
     let total_bits = analysis.total_bits;
-    let discriminant_bits = analysis.discriminant_bits;
-    let data_bits = analysis.data_bits;
 
     // Determine the Bytes type based on total bits
     let bytes_type = match total_bits {
@@ -313,77 +268,98 @@ fn generate_enum_with_data_variants(
         _ => return Err(format_err!(span, "enum requires more than 128 bits, which is not supported")),
     };
 
-    // Generate into_bytes match arms
+    // For external discrimination, we just convert directly between each variant
+    // and the underlying bytes - no internal discriminant needed
     let into_bytes_arms = analysis.variants.iter().map(|variant| {
         let variant_name = &variant.name;
-        let discriminant = variant.discriminant;
         let variant_span = variant_name.span();
         
         match &variant.variant_type {
             VariantType::Unit => {
-                // Unit variant: just encode discriminant in data_bits position
+                // Unit variant: all bits zero
                 quote_spanned!(variant_span=>
                     Self::#variant_name => {
-                        let discriminant = #discriminant as #bytes_type;
-                        let result = discriminant << #data_bits;
-                        ::core::result::Result::Ok(result)
+                        ::core::result::Result::Ok(0 as #bytes_type)
                     }
                 )
             },
             VariantType::Data(data_type) => {
+                let data_type = &**data_type;
                 quote_spanned!(variant_span=>
                     Self::#variant_name(data) => {
-                        // Convert data to bytes using its Specifier impl
+                        // Convert data directly to bytes using its Specifier impl
                         let data_bytes = <#data_type as ::modular_bitfield::Specifier>::into_bytes(data)?;
-                        
-                        // Convert to target bytes type for packing 
-                        let data_value = data_bytes as #bytes_type;
-                        
-                        // Pack discriminant and data
-                        let discriminant = #discriminant as #bytes_type;
-                        let packed = discriminant << #data_bits;
-                        let data_mask = if #data_bits >= 64 { (#bytes_type::MAX) } else { ((1 as #bytes_type) << #data_bits) - 1 };
-                        let result = packed | (data_value & data_mask);
-                        
-                        ::core::result::Result::Ok(result)
+                        ::core::result::Result::Ok(data_bytes as #bytes_type)
                     }
                 )
             }
         }
     });
 
-    // Generate from_bytes match arms
-    let from_bytes_arms = analysis.variants.iter().map(|variant| {
-        let variant_name = &variant.name;
-        let discriminant = variant.discriminant;
+    // For external discrimination, from_bytes always constructs the first variant
+    // User is responsible for using the correct constructor based on external information
+
+    // Generate const assertions to validate all data types have the same BITS as the enum
+    let data_types: Vec<_> = analysis.variants.iter().filter_map(|variant| {
+        match &variant.variant_type {
+            VariantType::Data(data_type) => Some(&**data_type),
+            VariantType::Unit => None,
+        }
+    }).collect();
+    
+    let const_assertions = if data_types.is_empty() {
+        vec![]
+    } else {
+        let mut assertions = vec![];
+        
+        // All data types must have the same BITS as the enum
+        for data_type in &data_types {
+            assertions.push(quote! {
+                const _: () = {
+                    // Debug: let's see what the actual values are
+                    const DATA_TYPE_BITS: usize = <#data_type as ::modular_bitfield::Specifier>::BITS;
+                    const TOTAL_BITS: usize = #total_bits;
+                    
+                    assert!(
+                        DATA_TYPE_BITS == TOTAL_BITS,
+                        "All data variant types must have the same BITS as the enum total"
+                    );
+                };
+            });
+        }
+        assertions
+    };
+
+    // Note: from_bytes is not a typical match - it will only use the first arm that matches.
+    // For external discrimination, the user is responsible for constructing the correct variant
+    // based on external information. The from_bytes here is mainly for completeness.
+    let first_arm = if let Some(first_variant) = analysis.variants.first() {
+        let variant_name = &first_variant.name;
         let variant_span = variant_name.span();
         
-        match &variant.variant_type {
+        match &first_variant.variant_type {
             VariantType::Unit => {
                 quote_spanned!(variant_span=>
-                    bytes if bytes >> #data_bits == (#discriminant as #bytes_type) => {
-                        ::core::result::Result::Ok(Self::#variant_name)
-                    }
+                    _ => ::core::result::Result::Ok(Self::#variant_name)
                 )
             },
             VariantType::Data(data_type) => {
+                let data_type = &**data_type;
                 quote_spanned!(variant_span=>
-                    bytes if bytes >> #data_bits == (#discriminant as #bytes_type) => {
-                        // Extract data bits
-                        let data_mask = if #data_bits >= 64 { (#bytes_type::MAX) } else { ((1 as #bytes_type) << #data_bits) - 1 };
-                        let data_value = bytes & data_mask;
-                        
-                        // Convert back to data type using its Specifier impl
-                        let data = <#data_type as ::modular_bitfield::Specifier>::from_bytes(data_value as <#data_type as ::modular_bitfield::Specifier>::Bytes)?;
-                        
+                    bytes => {
+                        let data = <#data_type as ::modular_bitfield::Specifier>::from_bytes(bytes as <#data_type as ::modular_bitfield::Specifier>::Bytes)?;
                         ::core::result::Result::Ok(Self::#variant_name(data))
                     }
                 )
             }
         }
-    });
+    } else {
+        return Err(format_err!(span, "enum must have at least one variant"));
+    };
 
     Ok(quote_spanned!(span=>
+        #( #const_assertions )*
+        
         impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
             const BITS: usize = #total_bits;
             type Bytes = #bytes_type;
@@ -398,13 +374,10 @@ fn generate_enum_with_data_variants(
 
             #[inline]
             fn from_bytes(bytes: <Self as ::modular_bitfield::Specifier>::Bytes) -> ::core::result::Result<<Self as ::modular_bitfield::Specifier>::InOut, ::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>> {
+                // For external discrimination, we default to the first variant
+                // User is responsible for using the correct constructor
                 match bytes {
-                    #( #from_bytes_arms ),*
-                    invalid_bytes => {
-                        ::core::result::Result::Err(
-                            <::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>>::new(invalid_bytes)
-                        )
-                    }
+                    #first_arm
                 }
             }
         }

@@ -10,7 +10,7 @@ error: conflicting `bits = 16` here
  --> tests/ui/bits_param/conflicting_repr.rs:3:12
   |
 3 | #[bitfield(bits = 16)]
-  |            ^^^^
+  |            ^^^^^^^^^
 
 error: conflicting #[repr(u32)] here
  --> tests/ui/bits_param/conflicting_repr.rs:4:8

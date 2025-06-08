@@ -32,9 +32,11 @@ pub mod prelude {
 ///
 /// # Note
 ///
-/// These can be all unsigned fixed-size primitives,
-/// represented by `B1, B2, ... B64` and enums that
-/// derive from `Specifier`.
+/// Specifiers can be:
+/// - Unsigned fixed-size primitives: `u8`, `u16`, `u32`, `u64`, `u128`
+/// - Bit-size types: `B1`, `B2`, ... `B128`
+/// - Enums that derive `Specifier` (including those with data variants)
+/// - Structs marked with `#[bitfield]` that also derive `Specifier`
 pub trait Specifier {
     /// The amount of bits used by the specifier.
     const BITS: usize;

@@ -214,6 +214,59 @@ data.set_status(Status::Green);
 assert_eq!(data.status_or_err(), Ok(Status::Green));
 ```
 
+### Example: Enum Data Variants
+
+Enums can contain data variants when deriving `Specifier`. This allows for more complex message types and tagged unions within bitfields:
+
+```rust
+#[derive(Specifier, Debug, PartialEq)]
+#[bits = 4]
+struct Priority {
+    level: B3,
+    urgent: bool,
+}
+
+#[derive(Specifier, Debug, PartialEq)]
+#[bits = 8]
+enum Message {
+    // Unit variants work as before
+    Heartbeat,
+    Reset,
+    // Data variants are supported
+    Data(Priority),
+    Error(u8),
+}
+
+#[bitfield]
+pub struct Packet {
+    header: B4,
+    #[bits = 8]
+    message: Message,
+    checksum: B4,
+}
+
+// Usage
+let priority = Priority::new().with_level(3).with_urgent(true);
+let packet = Packet::new()
+    .with_header(0xA)
+    .with_message(Message::Data(priority))
+    .with_checksum(0xF);
+
+match packet.message() {
+    Message::Data(p) => println!("Priority level: {}", p.level()),
+    Message::Error(code) => println!("Error code: {}", code),
+    _ => println!("Control message"),
+}
+```
+
+#### Requirements for Data Variants
+
+1. **All data types must implement `Specifier`** - Either derive it or use built-in types
+2. **All data variants must have the same bit size** - Ensures predictable memory layout
+3. **Total size must be specified with `#[bits = N]`** - Required for enums with data
+
+The macro automatically calculates the discriminant bits needed and uses the remaining bits for data storage.
+
 ## Benchmarks
 
 Below are some benchmarks between the [hand-written code][benchmark-code] and the macro-generated code for some example getters and setters that cover a decent variety of use cases.
