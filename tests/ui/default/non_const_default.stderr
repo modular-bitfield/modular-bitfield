@@ -1,0 +1,7 @@
+error[E0015]: cannot call non-const function `get_value` in constant functions
+ --> tests/ui/default/non_const_default.rs:9:15
+  |
+9 |     #[default(get_value())]  // Function call not allowed in const context
+  |               ^^^^^^^^^^^
+  |
+  = note: calls in constant functions are limited to constant functions, tuple structs and tuple variants
