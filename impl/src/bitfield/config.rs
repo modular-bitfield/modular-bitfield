@@ -13,6 +13,7 @@ pub struct Config {
     pub filled: Option<ConfigValue<bool>>,
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
+    pub derive_default: Option<ConfigValue<()>>,
     pub derive_specifier: Option<ConfigValue<()>>,
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
@@ -264,6 +265,25 @@ impl Config {
                 ))
             }
             None => self.derive_debug = Some(ConfigValue::new((), span)),
+        }
+        Ok(())
+    }
+
+    /// Registers the `#[derive(Default)]` attribute for the #[bitfield] macro.
+    ///
+    /// # Errors
+    ///
+    /// If a `#[derive(Default)]` attribute has already been found.
+    pub fn derive_default(&mut self, span: Span) -> Result<()> {
+        match &self.derive_default {
+            Some(previous) => {
+                return Err(Self::raise_duplicate_error(
+                    "#[derive(Default)]",
+                    span,
+                    previous,
+                ))
+            }
+            None => self.derive_default = Some(ConfigValue::new((), span)),
         }
         Ok(())
     }

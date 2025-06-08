@@ -4,6 +4,7 @@ mod default;
 mod default_edge_cases;
 mod derive_bitfield_specifier;
 mod derive_debug;
+mod derive_default;
 mod derive_specifier;
 mod filled_param;
 mod no_implicit_prelude;

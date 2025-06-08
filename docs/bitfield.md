@@ -266,6 +266,35 @@ pub struct Base {
 }
 ```
 
+## Support: `#[derive(Default)]`
+
+If a `#[derive(Default)]` is found by the `#[bitfield]` a `Default` implementation
+is generated that calls `Self::new()`. This means that when fields have `#[default(...)]`
+attributes, those default values will be applied. When no defaults are specified,
+all fields are zero-initialized.
+
+### Example
+
+```
+# use modular_bitfield::prelude::*;
+#[bitfield]
+#[derive(Default)]
+pub struct Config {
+    enabled: bool,
+    #[default(true)]
+    auto_restart: bool,
+    #[default(5)]
+    retry_count: B6,
+    flags: B8, // no default, so zero-initialized
+}
+
+let config = Config::default();
+assert_eq!(config.enabled(), false);     // zero-initialized
+assert_eq!(config.auto_restart(), true); // uses default value
+assert_eq!(config.retry_count(), 5);     // uses default value
+assert_eq!(config.flags(), 0);           // zero-initialized
+```
+
 ## Support: `#[derive(Debug)]`
 
 If a `#[derive(Debug)]` is found by the `#[bitfield]` a naturally formatting implementation

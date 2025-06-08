@@ -21,6 +21,7 @@ impl BitfieldStruct {
         let bytes_check = self.expand_optional_bytes_check(config);
         let repr_impls_and_checks = self.expand_repr_from_impls_and_checks(config);
         let debug_impl = self.generate_debug_impl(config);
+        let default_impl = self.generate_default_impl(config);
 
         quote_spanned!(span=>
             #struct_definition
@@ -32,6 +33,7 @@ impl BitfieldStruct {
             #bytes_check
             #repr_impls_and_checks
             #debug_impl
+            #default_impl
         )
     }
 
@@ -156,6 +158,26 @@ impl BitfieldStruct {
                     __bf_f.#builder_name(::core::stringify!(#ident))
                         #( #fields )*
                         .finish()
+                }
+            }
+        ))
+    }
+
+    /// Generates the `Default` implementation for the `#[bitfield]` struct if the
+    /// `#[derive(Default)]` attribute is applied to it.
+    ///
+    /// The implementation calls `Self::new()` which applies any field-level
+    /// `#[default(...)]` attributes and zero-initializes fields without defaults.
+    pub fn generate_default_impl(&self, config: &Config) -> Option<TokenStream2> {
+        config.derive_default.as_ref()?;
+        let span = self.item_struct.span();
+        let ident = &self.item_struct.ident;
+        let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+
+        Some(quote_spanned!(span=>
+            impl #impl_generics ::core::default::Default for #ident #ty_generics #where_clause {
+                fn default() -> Self {
+                    Self::new()
                 }
             }
         ))
