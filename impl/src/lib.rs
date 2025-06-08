@@ -7,6 +7,7 @@ mod errors;
 mod bitfield;
 mod bitfield_specifier;
 mod define_specifiers;
+mod utils;
 
 use proc_macro::TokenStream;
 
@@ -23,7 +24,7 @@ pub fn bitfield(args: TokenStream, input: TokenStream) -> TokenStream {
     bitfield::analyse_and_expand(args.into(), input.into()).into()
 }
 
-#[proc_macro_derive(Specifier, attributes(bits))]
+#[proc_macro_derive(Specifier, attributes(bits, discriminant_bits))]
 pub fn specifier(input: TokenStream) -> TokenStream {
     bitfield_specifier::generate(input.into()).into()
 }
@@ -32,7 +33,7 @@ pub fn specifier(input: TokenStream) -> TokenStream {
     since = "0.12.0",
     note = "use #[derive(Specifier)]. This alias will be removed in 0.13."
 )]
-#[proc_macro_derive(BitfieldSpecifier, attributes(bits))]
+#[proc_macro_derive(BitfieldSpecifier, attributes(bits, discriminant_bits))]
 pub fn bitfield_specifier(input: TokenStream) -> TokenStream {
     bitfield_specifier::generate(input.into()).into()
 }
