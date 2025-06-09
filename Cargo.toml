@@ -54,6 +54,10 @@ harness = false
 name = "cmp_bitfield_crate"
 harness = false
 
+[[bench]]
+name = "enum_data_variants"
+harness = false
+
 [[test]]
 name = "benches_handwritten"
 path = "benches/utils/handwritten.rs"
