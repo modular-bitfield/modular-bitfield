@@ -4,8 +4,12 @@ mod expand;
 mod field_config;
 mod field_info;
 mod params;
+pub mod variable_bits_errors;
 
 use self::{config::Config, params::ParamArgs};
+pub use self::config::VariableBitsConfig;
+pub use self::variable_bits_errors::VariableBitsError;
+pub use self::analyse::VariableStructAnalysis;
 use core::convert::TryFrom;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{self, parse::Result};

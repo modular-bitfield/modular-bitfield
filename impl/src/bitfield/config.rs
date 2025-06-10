@@ -5,6 +5,28 @@ use proc_macro2::Span;
 use std::collections::{hash_map::Entry, HashMap};
 use syn::parse::Result;
 
+/// Variable bits configuration for structs
+#[derive(Clone, Debug)]
+pub enum VariableBitsConfig {
+    Inferred,                    // #[variable_bits] - infer from variant data enum
+    Explicit(Vec<usize>),       // #[variable_bits = (32, 64, 96)]
+}
+
+impl VariableBitsConfig {
+    #[allow(dead_code)]
+    pub fn sizes(&self) -> Option<&[usize]> {
+        match self {
+            Self::Explicit(sizes) => Some(sizes),
+            Self::Inferred => None, // Will be resolved during analysis
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn is_inferred(&self) -> bool {
+        matches!(self, Self::Inferred)
+    }
+}
+
 /// The configuration for the `#[bitfield]` macro.
 #[derive(Default)]
 pub struct Config {
@@ -17,6 +39,7 @@ pub struct Config {
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
     pub field_configs: HashMap<usize, ConfigValue<FieldConfig>>,
+    pub variable_bits: Option<ConfigValue<VariableBitsConfig>>,
 }
 
 /// Kinds of `#[repr(uN)]` annotations for a `#[bitfield]` struct.
@@ -296,5 +319,33 @@ impl Config {
             }
         }
         Ok(())
+    }
+
+    /// Sets the `variable_bits` parameter for structs
+    ///
+    /// # Errors
+    ///
+    /// If both `#[bits = N]` and `#[variable_bits]` are specified on the same struct,
+    /// or if `#[variable_bits]` is specified multiple times.
+    pub fn variable_bits(&mut self, value: VariableBitsConfig, span: Span) -> Result<()> {
+        if self.bits.is_some() {
+            return Err(format_err!(
+                span,
+                "cannot use both #[bits = N] and #[variable_bits] on same struct"
+            ));
+        }
+        match &self.variable_bits {
+            Some(previous) => Err(Self::raise_duplicate_error("variable_bits", span, previous)),
+            None => {
+                self.variable_bits = Some(ConfigValue::new(value, span));
+                Ok(())
+            }
+        }
+    }
+
+    /// Returns true if this struct uses variable bits
+    #[allow(dead_code)]
+    pub fn is_variable_bits(&self) -> bool {
+        self.variable_bits.is_some()
     }
 }

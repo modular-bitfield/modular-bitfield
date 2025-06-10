@@ -1,13 +1,11 @@
-error: expected `=`
- --> tests/ui/bits_param/missing_param_value.rs:3:1
+error: encountered unsupported #[bitfield] attribute
+ --> tests/ui/bits_param/missing_param_value.rs:3:12
   |
 3 | #[bitfield(bits)]
-  | ^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the attribute macro `bitfield` (in Nightly builds, run with -Z macro-backtrace for more info)
+  |            ^^^^
 
-error: expected `=`
- --> tests/ui/bits_param/missing_param_value.rs:9:16
+error: encountered unsupported #[bitfield] attribute format
+ --> tests/ui/bits_param/missing_param_value.rs:9:12
   |
 9 | #[bitfield(bits(32))]
-  |                ^
+  |            ^^^^^^^^

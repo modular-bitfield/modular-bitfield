@@ -8,6 +8,7 @@ mod no_implicit_prelude;
 mod regressions;
 mod repr;
 mod skip;
+mod variable_bits;
 
 use modular_bitfield::prelude::*;
 

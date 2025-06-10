@@ -58,6 +58,14 @@ harness = false
 name = "enum_data_variants"
 harness = false
 
+[[bench]]
+name = "variable_bits_performance"
+harness = false
+
+[[bench]]
+name = "cmp_variable_bits"
+harness = false
+
 [[test]]
 name = "benches_handwritten"
 path = "benches/utils/handwritten.rs"

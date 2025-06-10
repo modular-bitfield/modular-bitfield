@@ -1,0 +1,7 @@
+error: data variant Medium requires #[bits = N] when using inferred variable_bits
+  --> tests/ui/variable_bits/inferred_missing_bits.rs:9:5
+   |
+9  | /     #[discriminant = 1]
+10 | |     // Missing #[bits = N] for inferred mode
+11 | |     Medium(u16),
+   | |_______________^

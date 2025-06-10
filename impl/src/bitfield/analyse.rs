@@ -1,6 +1,8 @@
 use super::{
-    config::{Config, ReprKind},
+    config::{Config, ReprKind, VariableBitsConfig},
     field_config::{FieldConfig, SkipWhich},
+    field_info::{FieldInfo, VariantRole},
+    variable_bits_errors::VariableBitsError,
     raise_skip_error, BitfieldStruct,
 };
 use core::convert::TryFrom;
@@ -224,10 +226,209 @@ impl BitfieldStruct {
                         ))
                     }
                 }
+            } else if attr.path().is_ident("variant_discriminator") {
+                match &attr.meta {
+                    syn::Meta::Path(path) => {
+                        config.variant_discriminator(path.span())?;
+                    }
+                    _ => {
+                        return Err(format_err!(
+                            attr.span(),
+                            "encountered invalid format for #[variant_discriminator] field attribute, expected #[variant_discriminator]"
+                        ))
+                    }
+                }
+            } else if attr.path().is_ident("variant_data") {
+                match &attr.meta {
+                    syn::Meta::Path(path) => {
+                        config.variant_data(path.span())?;
+                    }
+                    _ => {
+                        return Err(format_err!(
+                            attr.span(),
+                            "encountered invalid format for #[variant_data] field attribute, expected #[variant_data]"
+                        ))
+                    }
+                }
             } else {
                 config.retain_attr(attr.clone());
             }
         }
         Ok(config)
     }
+}
+
+/// Analysis result for variable-size structs
+pub struct VariableStructAnalysis {
+    pub discriminator_field_index: usize,       // Index of field marked with #[variant_discriminator]
+    pub _data_field_index: usize,               // Index of field marked with #[variant_data]
+    pub _fixed_field_indices: Vec<usize>,       // Indices of all other fields
+    pub sizes: Vec<usize>,                      // Total struct sizes for each configuration
+    pub fixed_bits: usize,                     // Total bits used by non-variant fields
+    pub data_enum_type: syn::Type,             // Type of the variant data field
+}
+
+impl BitfieldStruct {
+    /// Analyze variable-size struct configuration
+    pub fn analyze_variable_bits(&self, config: &Config) -> syn::Result<Option<VariableStructAnalysis>> {
+        let variable_config = match &config.variable_bits {
+            Some(config_value) => &config_value.value,
+            None => return Ok(None), // Not a variable-size struct
+        };
+
+        // Collect all field infos
+        let field_infos: Vec<_> = self.field_infos(config).collect();
+
+        // Find discriminator and data fields
+        let mut discriminator_field: Option<(usize, &FieldInfo<'_>)> = None;
+        let mut data_field: Option<(usize, &FieldInfo<'_>)> = None;
+        let mut fixed_fields = Vec::new();
+
+        for (index, field_info) in field_infos.iter().enumerate() {
+            match field_info.variant_role {
+                Some(VariantRole::Discriminator) => {
+                    if discriminator_field.is_some() {
+                        return Err(VariableBitsError::MultipleVariantFields {
+                            field_type: "discriminator",
+                            first_span: discriminator_field.unwrap().1.field.span(),
+                            second_span: field_info.field.span(),
+                        }.to_syn_error());
+                    }
+                    discriminator_field = Some((index, field_info));
+                }
+                Some(VariantRole::Data) => {
+                    if data_field.is_some() {
+                        return Err(VariableBitsError::MultipleVariantFields {
+                            field_type: "data",
+                            first_span: data_field.unwrap().1.field.span(),
+                            second_span: field_info.field.span(),
+                        }.to_syn_error());
+                    }
+                    data_field = Some((index, field_info));
+                }
+                None => {
+                    fixed_fields.push((index, field_info));
+                }
+            }
+        }
+
+        let (discriminator_field_index, discriminator_field) = discriminator_field.ok_or_else(|| {
+            VariableBitsError::MissingVariantField {
+                field_type: "discriminator",
+                span: self.item_struct.span(),
+            }.to_syn_error()
+        })?;
+
+        let (data_field_index, data_field) = data_field.ok_or_else(|| {
+            VariableBitsError::MissingVariantField {
+                field_type: "data",
+                span: self.item_struct.span(),
+            }.to_syn_error()
+        })?;
+
+        // Calculate fixed field bits
+        let fixed_bits = calculate_fixed_field_bits(&fixed_fields, &(discriminator_field_index, discriminator_field))?;
+
+        // Determine struct sizes
+        let sizes = match variable_config {
+            VariableBitsConfig::Explicit(sizes) => {
+                // Validate sizes are achievable with fixed fields
+                for &total_size in sizes {
+                    if total_size <= fixed_bits {
+                        return Err(format_err!(
+                            data_field.field.span(),
+                            "total size {} too small for fixed fields requiring {} bits",
+                            total_size, fixed_bits
+                        ));
+                    }
+                }
+                sizes.clone()
+            }
+            VariableBitsConfig::Inferred => {
+                // For struct inference, we generate sizes that accommodate all possible
+                // data variants. This requires the data enum to have variable_bits too.
+                // For now, require explicit specification for structs.
+                return Err(format_err!(
+                    self.item_struct.span(),
+                    "inferred variable_bits requires explicit tuple for structs, e.g., #[variable_bits = (32, 64, 96)]"
+                ));
+            }
+        };
+
+        // Validate discriminator field can hold enough values
+        validate_discriminator_capacity(&(discriminator_field_index, discriminator_field), sizes.len())?;
+
+        // Validate data field type compatibility (will be checked at compile-time too)
+        let data_enum_type = data_field.field.ty.clone();
+
+        Ok(Some(VariableStructAnalysis {
+            discriminator_field_index,
+            _data_field_index: data_field_index,
+            _fixed_field_indices: fixed_fields.iter().map(|(index, _)| *index).collect(),
+            sizes,
+            fixed_bits,
+            data_enum_type,
+        }))
+    }
+}
+
+fn calculate_fixed_field_bits(
+    fixed_fields: &[(usize, &FieldInfo<'_>)],
+    discriminator_field: &(usize, &FieldInfo<'_>),
+) -> syn::Result<usize> {
+    let mut total_bits = 0;
+
+    // Add discriminator field bits
+    let (_, discriminator_field_info) = discriminator_field;
+    if let Some(bits_config) = &discriminator_field_info.config.bits {
+        total_bits += bits_config.value;
+    } else {
+        // Need to calculate from type - this is complex, defer to compile-time
+        // For now, require explicit #[bits = N] on discriminator field
+        return Err(format_err!(
+            discriminator_field_info.field.span(),
+            "variant_discriminator field requires explicit #[bits = N] attribute"
+        ));
+    }
+
+    // Add fixed field bits
+    for (_, field_info) in fixed_fields {
+        if let Some(bits_config) = &field_info.config.bits {
+            total_bits += bits_config.value;
+        } else {
+            // Need to calculate from type - defer to compile-time for now
+            return Err(format_err!(
+                field_info.field.span(),
+                "fixed fields in variable_bits structs require explicit #[bits = N] attribute"
+            ));
+        }
+    }
+
+    Ok(total_bits)
+}
+
+fn validate_discriminator_capacity(
+    discriminator_field: &(usize, &FieldInfo<'_>),
+    num_variants: usize,
+) -> syn::Result<()> {
+    let (_, discriminator_field_info) = discriminator_field;
+    let discriminator_bits = discriminator_field_info.config.bits
+        .as_ref()
+        .map(|config| config.value)
+        .ok_or_else(|| format_err!(
+            discriminator_field_info.field.span(),
+            "discriminator field must have explicit #[bits = N] attribute"
+        ))?;
+
+    let max_variants = 1 << discriminator_bits;
+    if num_variants > max_variants {
+        return Err(VariableBitsError::InvalidDiscriminantRange {
+            discriminant: num_variants - 1,
+            max_allowed: max_variants - 1,
+            discriminator_bits,
+            span: discriminator_field_info.field.span(),
+        }.to_syn_error());
+    }
+
+    Ok(())
 }

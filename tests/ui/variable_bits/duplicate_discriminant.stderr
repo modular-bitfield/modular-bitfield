@@ -1,0 +1,6 @@
+error: duplicate discriminant value 0 (variant Medium conflicts with previous variant)
+ --> tests/ui/variable_bits/duplicate_discriminant.rs:8:5
+  |
+8 | /     #[discriminant = 0]  // Duplicate discriminant
+9 | |     Medium(u16),
+  | |_______________^

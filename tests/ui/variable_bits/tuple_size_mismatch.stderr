@@ -1,0 +1,11 @@
+error: variable_bits tuple must have 3 elements (one per variant), found 2
+  --> tests/ui/variable_bits/tuple_size_mismatch.rs:4:1
+   |
+4  | / #[variable_bits(8, 16)]  // Only 2 sizes but 3 variants
+5  | | enum TestData {
+6  | |     #[discriminant = 0]
+7  | |     Small(u8),
+...  |
+11 | |     Large(u32),
+12 | | }
+   | |_^
