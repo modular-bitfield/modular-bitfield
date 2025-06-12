@@ -1,5 +1,11 @@
-error: invalid variable_bits attribute format, use #[variable_bits] or #[variable_bits(8, 16, 32)]
- --> tests/ui/variable_bits/invalid_attribute_format.rs:4:1
+error: bits must be integer literal for fixed size: #[bits = N]
+ --> tests/ui/variable_bits/invalid_attribute_format.rs:4:3
   |
-4 | #[variable_bits = 42]  // Invalid: should be list format
-  | ^^^^^^^^^^^^^^^^^^^^^
+4 | #[bits = hello]  // Invalid: should be an integer
+  |   ^^^^^^^^^^^^
+
+error: attribute value must be a literal
+ --> tests/ui/variable_bits/invalid_attribute_format.rs:4:10
+  |
+4 | #[bits = hello]  // Invalid: should be an integer
+  |          ^^^^^

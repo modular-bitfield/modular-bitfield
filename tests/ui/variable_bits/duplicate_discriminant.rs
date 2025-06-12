@@ -1,7 +1,7 @@
 use modular_bitfield::prelude::*;
 
 #[derive(Specifier)]
-#[variable_bits(8, 16)]
+#[bits(8, 16)]
 enum TestData {
     #[discriminant = 0]
     Small(u8),

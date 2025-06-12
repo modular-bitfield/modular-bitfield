@@ -334,12 +334,11 @@ impl Config {
                 "cannot use both #[bits = N] and #[variable_bits] on same struct"
             ));
         }
-        match &self.variable_bits {
-            Some(previous) => Err(Self::raise_duplicate_error("variable_bits", span, previous)),
-            None => {
-                self.variable_bits = Some(ConfigValue::new(value, span));
-                Ok(())
-            }
+        if let Some(previous) = &self.variable_bits {
+            Err(Self::raise_duplicate_error("variable_bits", span, previous))
+        } else {
+            self.variable_bits = Some(ConfigValue::new(value, span));
+            Ok(())
         }
     }
 

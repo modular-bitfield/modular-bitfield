@@ -1,5 +1,5 @@
-error: variable_bits sizes must be greater than 0
- --> tests/ui/variable_bits/zero_size_not_allowed.rs:4:17
+error: bits sizes must be greater than 0
+ --> tests/ui/variable_bits/zero_size_not_allowed.rs:4:8
   |
-4 | #[variable_bits(0, 8)]  // Zero size not allowed
-  |                 ^
+4 | #[bits(0, 8)]  // Zero size not allowed
+  |        ^

@@ -5,7 +5,7 @@ use modular_bitfield::prelude::*;
 #[test]
 fn basic_variable_enum() {
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits(8, 16, 32)]
+    #[bits(8, 16, 32)]
     enum SimpleData {
         #[discriminant = 0]
         Small(u8), // For 8 bits: use u8 (can hold 0-255)
@@ -44,7 +44,7 @@ fn basic_variable_enum() {
 #[test]
 fn variable_enum_serialization() {
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits(8, 16)]
+    #[bits(8, 16)]
     enum TestData {
         #[discriminant = 0]
         Small(u8),
@@ -73,7 +73,7 @@ fn variable_enum_serialization() {
 #[test]
 fn variable_enum_inferred() {
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits]
+    #[bits(8, 16)]
     enum InferredData {
         #[discriminant = 0]
         #[bits = 8]
@@ -92,7 +92,7 @@ fn variable_enum_inferred() {
 #[test]
 fn variable_enum_unit_variants() {
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits(8, 16)]
+    #[bits(8, 16)]
     enum MixedData {
         #[discriminant = 0]
         Empty, // Unit variant
@@ -114,7 +114,7 @@ fn variable_enum_unit_variants() {
 fn variable_enum_odd_sizes() {
     // For odd sizes, we specify the data types that can hold those bits
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits(7, 13, 17)]
+    #[bits(7, 13, 17)]
     enum OddSizedData {
         #[discriminant = 0]
         Small(u8), // Can hold 7 bits (up to 2^7-1 = 127)
@@ -168,9 +168,9 @@ fn variable_enum_odd_sizes() {
 fn variable_enum_large_discriminants() {
     // Test that discriminants can now use u16 range (beyond 255)
     #[derive(Specifier, Debug, Clone, Copy)]
-    #[variable_bits(8, 16)]
+    #[bits(8, 16)]
     enum LargeDiscriminantData {
-        #[discriminant = 300]  // > 255, would fail with old u8 limit
+        #[discriminant = 300] // > 255, would fail with old u8 limit
         First(u8),
         #[discriminant = 1000] // Much larger discriminant
         Second(u16),
@@ -178,11 +178,11 @@ fn variable_enum_large_discriminants() {
 
     // Test basic functionality
     assert_eq!(<LargeDiscriminantData as Specifier>::BITS, 16);
-    
+
     let first = LargeDiscriminantData::First(42);
     assert_eq!(first.discriminant(), 300);
     assert_eq!(first.size(), 8);
-    
+
     let second = LargeDiscriminantData::Second(1234);
     assert_eq!(second.discriminant(), 1000);
     assert_eq!(second.size(), 16);
@@ -191,12 +191,16 @@ fn variable_enum_large_discriminants() {
     assert_eq!(LargeDiscriminantData::size_for_discriminant(300), Some(8));
     assert_eq!(LargeDiscriminantData::size_for_discriminant(1000), Some(16));
     assert_eq!(LargeDiscriminantData::size_for_discriminant(999), None);
-    
-    assert_eq!(LargeDiscriminantData::supported_discriminants(), &[300, 1000]);
+
+    assert_eq!(
+        LargeDiscriminantData::supported_discriminants(),
+        &[300, 1000]
+    );
     assert_eq!(LargeDiscriminantData::supported_sizes(), &[8, 16]);
 
     // Test serialization with large discriminants
     let first_bytes = LargeDiscriminantData::into_bytes(first).unwrap();
-    let decoded_first = LargeDiscriminantData::from_discriminant_and_bytes(300, first_bytes).unwrap();
+    let decoded_first =
+        LargeDiscriminantData::from_discriminant_and_bytes(300, first_bytes).unwrap();
     assert_eq!(decoded_first.discriminant(), 300);
 }

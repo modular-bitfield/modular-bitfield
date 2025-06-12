@@ -1,5 +1,5 @@
-error: variable_bits sizes cannot exceed 128 bits
- --> tests/ui/variable_bits/size_too_large.rs:4:20
+error: bits sizes cannot exceed 128 bits
+ --> tests/ui/variable_bits/size_too_large.rs:4:11
   |
-4 | #[variable_bits(8, 256)]  // 256 > 128 bits max
-  |                    ^^^
+4 | #[bits(8, 256)]  // 256 > 128 bits max
+  |           ^^^

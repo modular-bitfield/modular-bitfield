@@ -3,8 +3,6 @@ use modular_bitfield::prelude::*;
 
 // Variable-size message types
 #[derive(Debug, Clone, Copy, Specifier)]
-#[variable_bits(28, 60, 124)] // 32-4=28, 64-4=60, 128-4=124
-#[discriminant_bits = 4]
 enum UmpData {
     #[discriminant = 0]
     Utility(u32), // 32-bit message
@@ -15,7 +13,7 @@ enum UmpData {
 }
 
 // MIDI UMP message with variable size
-#[bitfield(variable_bits = (32, 64, 128))]
+#[bitfield]
 #[derive(Debug, Clone, Copy)]
 struct UmpMessage {
     #[variant_discriminator]

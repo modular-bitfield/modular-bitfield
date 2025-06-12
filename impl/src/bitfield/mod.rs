@@ -7,7 +7,6 @@ mod params;
 pub mod variable_bits_errors;
 
 pub use self::analyse::VariableStructAnalysis;
-pub use self::config::VariableBitsConfig;
 pub use self::variable_bits_errors::VariableBitsError;
 use self::{config::Config, params::ParamArgs};
 use core::convert::TryFrom;

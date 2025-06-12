@@ -292,10 +292,10 @@ impl BitfieldStruct {
         for (index, field_info) in field_infos.iter().enumerate() {
             match field_info.variant_role {
                 Some(VariantRole::Discriminator) => {
-                    if discriminator_field.is_some() {
+                    if let Some((_, existing_field)) = discriminator_field {
                         return Err(VariableBitsError::MultipleVariantFields {
                             field_type: "discriminator",
-                            first_span: discriminator_field.unwrap().1.field.span(),
+                            first_span: existing_field.field.span(),
                             second_span: field_info.field.span(),
                         }
                         .to_syn_error());
@@ -303,10 +303,10 @@ impl BitfieldStruct {
                     discriminator_field = Some((index, field_info));
                 }
                 Some(VariantRole::Data) => {
-                    if data_field.is_some() {
+                    if let Some((_, existing_field)) = data_field {
                         return Err(VariableBitsError::MultipleVariantFields {
                             field_type: "data",
-                            first_span: data_field.unwrap().1.field.span(),
+                            first_span: existing_field.field.span(),
                             second_span: field_info.field.span(),
                         }
                         .to_syn_error());

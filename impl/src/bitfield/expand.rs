@@ -27,16 +27,16 @@ impl BitfieldStruct {
         let is_variable_size = config.variable_bits.is_some();
 
         // Only generate standard checks and conversions for non-variable structs
-        let check_filled = if !is_variable_size {
-            self.generate_check_for_filled(config)
-        } else {
+        let check_filled = if is_variable_size {
             quote! {}
+        } else {
+            self.generate_check_for_filled(config)
         };
 
-        let byte_conversion_impls = if !is_variable_size {
-            self.expand_byte_conversion_impls(config)
-        } else {
+        let byte_conversion_impls = if is_variable_size {
             quote! {}
+        } else {
+            self.expand_byte_conversion_impls(config)
         };
 
         let getters_and_setters = self.expand_getters_and_setters(config);
@@ -389,26 +389,23 @@ impl BitfieldStruct {
         let is_variable_size = config.variable_bits.is_some();
         if is_variable_size {
             if let Some(variable_config) = &config.variable_bits {
-                match &variable_config.value {
-                    VariableBitsConfig::Explicit(sizes) => {
-                        let max_size = sizes.iter().max().unwrap_or(&0);
-                        let max_bytes = (max_size + 7) / 8;
-                        return quote_spanned!(span=>
-                            impl #impl_generics #ident #ty_generics #where_clause
-                            {
-                                /// Returns an instance with zero initialized data.
-                                #[allow(clippy::identity_op)]
-                                #[allow(clippy::new_without_default)]
-                                #[must_use]
-                                pub const fn new() -> Self {
-                                    Self {
-                                        bytes: [0u8; #max_bytes],
-                                    }
+                if let VariableBitsConfig::Explicit(sizes) = &variable_config.value {
+                    let max_size = sizes.iter().max().unwrap_or(&0);
+                    let max_bytes = (max_size + 7) / 8;
+                    return quote_spanned!(span=>
+                        impl #impl_generics #ident #ty_generics #where_clause
+                        {
+                            /// Returns an instance with zero initialized data.
+                            #[allow(clippy::identity_op)]
+                            #[allow(clippy::new_without_default)]
+                            #[must_use]
+                            pub const fn new() -> Self {
+                                Self {
+                                    bytes: [0u8; #max_bytes],
                                 }
                             }
-                        );
-                    }
-                    _ => {}
+                        }
+                    );
                 }
             }
         }

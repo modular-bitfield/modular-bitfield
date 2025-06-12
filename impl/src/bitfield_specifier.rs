@@ -1,4 +1,4 @@
-use crate::bitfield::{VariableBitsConfig, VariableBitsError};
+use crate::bitfield::VariableBitsError;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
 use std::collections::HashSet;
@@ -53,9 +53,14 @@ struct EnumAnalysis {
     has_data_variants: bool, // True if any variant has data
 }
 
+#[derive(Debug, Clone)]
+enum BitsConfig {
+    Fixed(usize),         // #[bits = 32]
+    Variable(Vec<usize>), // #[bits = (8, 16, 32)]
+}
+
 struct Attributes {
-    bits: Option<usize>,
-    variable_bits: Option<VariableBitsConfig>,
+    bits: Option<BitsConfig>,
     discriminant_bits: Option<usize>, // For #[discriminant_bits = N]
 }
 
@@ -70,7 +75,6 @@ struct VariableEnumAnalysis {
 fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
     let mut attributes = Attributes {
         bits: None,
-        variable_bits: None,
         discriminant_bits: None,
     };
 
@@ -82,90 +86,67 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                     "More than one 'bits' attribute is not permitted",
                 ));
             }
-            let meta = attr.meta.require_name_value()?;
-            attributes.bits = if let syn::Expr::Lit(syn::ExprLit {
-                lit: syn::Lit::Int(lit),
-                ..
-            }) = &meta.value
-            {
-                Some(lit.base10_parse::<usize>()?)
-            } else {
-                return Err(format_err_spanned!(
-                    attr,
-                    "could not parse 'bits' attribute",
-                ));
-            };
-        } else if attr.path().is_ident("variable_bits") {
-            if attributes.variable_bits.is_some() {
-                return Err(format_err_spanned!(
-                    attr,
-                    "More than one 'variable_bits' attribute is not permitted",
-                ));
-            }
 
             match &attr.meta {
-                syn::Meta::Path(_) => {
-                    // #[variable_bits] - infer from variants
-                    attributes.variable_bits = Some(VariableBitsConfig::Inferred);
+                syn::Meta::NameValue(meta) => {
+                    match &meta.value {
+                        // #[bits = 32]
+                        syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Int(lit),
+                            ..
+                        }) => {
+                            attributes.bits = Some(BitsConfig::Fixed(lit.base10_parse::<usize>()?));
+                        }
+                        _ => {
+                            return Err(format_err_spanned!(
+                                meta,
+                                "bits must be integer literal for fixed size: #[bits = N]"
+                            ));
+                        }
+                    }
                 }
                 syn::Meta::List(meta_list) => {
-                    // #[variable_bits(24, 56, 88)]
+                    // #[bits(8, 16, 32)]
+                    let content = &meta_list.tokens;
+
+                    // Custom parser for the comma-separated list of integers
+                    #[allow(clippy::items_after_statements)]
+                    struct IntList(Vec<syn::LitInt>);
+
+                    #[allow(clippy::items_after_statements)]
+                    impl syn::parse::Parse for IntList {
+                        fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
+                            let parsed = syn::punctuated::Punctuated::<syn::LitInt, syn::Token![,]>::parse_terminated(input)?;
+                            Ok(IntList(parsed.into_iter().collect()))
+                        }
+                    }
+
+                    let parsed_content: IntList = syn::parse2(content.clone())?;
+
                     let mut sizes = Vec::new();
-
-                    // Parse the tokens manually since parse_nested_meta doesn't work well with literals
-                    let parser = |input: syn::parse::ParseStream<'_>| {
-                        let punctuated: syn::punctuated::Punctuated<syn::LitInt, syn::Token![,]> =
-                            input.parse_terminated(
-                                |stream| stream.parse::<syn::LitInt>(),
-                                syn::Token![,],
-                            )?;
-                        Ok(punctuated)
-                    };
-
-                    let literals = meta_list.parse_args_with(parser)?;
-
-                    for lit in literals {
-                        let size = lit.base10_parse::<usize>().map_err(|err| {
-                            format_err_spanned!(lit, "invalid integer in variable_bits: {}", err)
-                        })?;
+                    for lit in parsed_content.0 {
+                        let size = lit.base10_parse::<usize>()?;
+                        
+                        // Validate size constraints
                         if size == 0 {
-                            return Err(format_err_spanned!(
-                                lit,
-                                "variable_bits sizes must be greater than 0"
-                            ));
+                            return Err(format_err_spanned!(lit, "bits sizes must be greater than 0"));
                         }
                         if size > 128 {
-                            return Err(format_err_spanned!(
-                                lit,
-                                "variable_bits sizes cannot exceed 128 bits"
-                            ));
+                            return Err(format_err_spanned!(lit, "bits sizes cannot exceed 128 bits"));
                         }
+                        
                         sizes.push(size);
                     }
 
                     if sizes.is_empty() {
-                        return Err(format_err_spanned!(
-                            meta_list,
-                            "variable_bits list cannot be empty"
-                        ));
+                        return Err(format_err_spanned!(meta_list, "bits list cannot be empty"));
                     }
-
-                    // Validate sizes are in non-decreasing order (optional constraint for performance)
-                    for window in sizes.windows(2) {
-                        if window[1] < window[0] {
-                            return Err(format_err_spanned!(
-                                meta_list,
-                                "variable_bits sizes should be in non-decreasing order for optimal performance"
-                            ));
-                        }
-                    }
-
-                    attributes.variable_bits = Some(VariableBitsConfig::Explicit(sizes));
+                    attributes.bits = Some(BitsConfig::Variable(sizes));
                 }
-                _ => {
+                syn::Meta::Path(_) => {
                     return Err(format_err_spanned!(
                         attr,
-                        "invalid variable_bits attribute format, use #[variable_bits] or #[variable_bits(8, 16, 32)]",
+                        "bits attribute requires a value: #[bits = N] or #[bits(N, M, ...)]"
                     ));
                 }
             }
@@ -287,10 +268,10 @@ fn analyze_variable_enum(
     input: &syn::ItemEnum,
     attributes: &Attributes,
 ) -> syn::Result<VariableEnumAnalysis> {
-    let variable_bits_config = attributes
-        .variable_bits
+    let bits_config = attributes
+        .bits
         .as_ref()
-        .ok_or_else(|| format_err!(input, "variable enum requires #[variable_bits] attribute"))?;
+        .ok_or_else(|| format_err!(input, "variable enum requires #[bits] attribute"))?;
 
     // Parse all variants with their attributes
     let mut variants = Vec::new();
@@ -326,8 +307,8 @@ fn analyze_variable_enum(
     }
 
     // Determine variant sizes based on configuration
-    let variant_sizes = match variable_bits_config {
-        VariableBitsConfig::Explicit(tuple_sizes) => {
+    let variant_sizes = match bits_config {
+        BitsConfig::Variable(tuple_sizes) => {
             // Validate tuple size matches variant count
             if tuple_sizes.len() != variants.len() {
                 return Err(VariableBitsError::TupleSizeMismatch {
@@ -356,31 +337,13 @@ fn analyze_variable_enum(
 
             tuple_sizes.clone()
         }
-        VariableBitsConfig::Inferred => {
-            // Infer sizes from variant #[bits = N] attributes
-            let mut inferred_sizes = Vec::new();
-
-            for variant in &variants {
-                match &variant.variant_type {
-                    VariantType::Unit => {
-                        // Unit variants default to 0 bits
-                        inferred_sizes.push(0);
-                    }
-                    VariantType::Data(_) => {
-                        if let Some(explicit_bits) = variant.explicit_bits {
-                            inferred_sizes.push(explicit_bits);
-                        } else {
-                            return Err(format_err!(
-                                variant.span,
-                                "data variant {} requires #[bits = N] when using inferred variable_bits",
-                                variant.name
-                            ));
-                        }
-                    }
-                }
-            }
-
-            inferred_sizes
+        BitsConfig::Fixed(_size) => {
+            // For fixed size enums, all variants should use the same size
+            // This is handled by the regular fixed-size enum logic, not variable enum logic
+            return Err(format_err!(
+                input.span(),
+                "fixed size enum should not use variable enum analysis"
+            ));
         }
     };
 
@@ -401,6 +364,7 @@ fn analyze_variable_enum(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn generate_variable_enum_specifier_impl(
     analysis: &VariableEnumAnalysis,
     enum_ident: &syn::Ident,
@@ -413,8 +377,7 @@ fn generate_variable_enum_specifier_impl(
 
     // Determine the Bytes type based on max size
     let bytes_type = match max_size {
-        0 => quote! { u8 }, // Handle all-unit enums
-        1..=8 => quote! { u8 },
+        0..=8 => quote! { u8 }, // Handle all-unit enums and 1-8 bits
         9..=16 => quote! { u16 },
         17..=32 => quote! { u32 },
         33..=64 => quote! { u64 },
@@ -564,6 +527,7 @@ fn generate_variable_enum_specifier_impl(
     ))
 }
 
+#[allow(clippy::too_many_lines)]
 fn generate_enum_discriminant_helpers(
     analysis: &VariableEnumAnalysis,
     enum_ident: &syn::Ident,
@@ -571,7 +535,11 @@ fn generate_enum_discriminant_helpers(
     // Check if this enum uses external discriminant bits
     if let Some(discriminant_bits) = analysis.discriminant_bits {
         // Generate methods for external discriminant handling
-        return generate_external_discriminant_helpers(analysis, enum_ident, discriminant_bits);
+        return Ok(generate_external_discriminant_helpers(
+            analysis,
+            enum_ident,
+            discriminant_bits,
+        ));
     }
 
     // Generate size lookup by discriminant
@@ -736,11 +704,11 @@ fn generate_external_discriminant_helpers(
     _analysis: &VariableEnumAnalysis,
     enum_ident: &syn::Ident,
     discriminant_bits: usize,
-) -> syn::Result<TokenStream2> {
+) -> TokenStream2 {
     let span = enum_ident.span();
 
     // Generate methods specific to external discriminant handling
-    Ok(quote_spanned!(span=>
+    quote_spanned!(span=>
         impl #enum_ident {
             /// Get the number of discriminant bits expected from parent
             pub const fn discriminant_bits() -> usize {
@@ -752,9 +720,10 @@ fn generate_external_discriminant_helpers(
                 true
             }
         }
-    ))
+    )
 }
 
+#[allow(clippy::too_many_lines)]
 fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<EnumAnalysis> {
     let span = input.span();
 
@@ -766,7 +735,7 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
 
     if has_data_variants {
         // Data variants require explicit bits specification
-        if attributes.variable_bits.is_some() {
+        if let Some(BitsConfig::Variable(_)) = &attributes.bits {
             // Variable bits enum - use different analysis path
             return Err(format_err!(
                 span,
@@ -774,12 +743,19 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
             ));
         }
 
-        let total_bits = attributes.bits.ok_or_else(|| {
-            format_err!(
-                span,
-                "enums with data variants must specify #[bits = N] or #[variable_bits(...)]"
-            )
-        })?;
+        let total_bits = match &attributes.bits {
+            Some(BitsConfig::Fixed(size)) => *size,
+            Some(BitsConfig::Variable(_)) => {
+                // This should have been caught above
+                unreachable!("variable bits should be handled separately")
+            }
+            None => {
+                return Err(format_err!(
+                    span,
+                    "enums with data variants must specify #[bits = N] or #[bits = (sizes...)]"
+                ));
+            }
+        };
 
         // Classify each variant
         let variants = input
@@ -825,8 +801,16 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
     } else {
         // Unit-only enums (existing logic)
         let variant_count = input.variants.len();
-        let total_bits = if let Some(bits) = attributes.bits {
-            bits
+        let total_bits = if let Some(bits_config) = &attributes.bits {
+            match bits_config {
+                BitsConfig::Fixed(size) => *size,
+                BitsConfig::Variable(_) => {
+                    return Err(format_err!(
+                        span,
+                        "unit-only enums cannot use variable bits"
+                    ));
+                }
+            }
         } else {
             if !variant_count.is_power_of_two() {
                 return Err(format_err!(
@@ -875,7 +859,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // Check if this is a variable-size enum
-    if attributes.variable_bits.is_some() {
+    if let Some(BitsConfig::Variable(_)) = &attributes.bits {
         // Use variable enum analysis and generation
         let variable_analysis = analyze_variable_enum(input, &attributes)?;
         generate_variable_enum_specifier_impl(
@@ -974,6 +958,7 @@ fn generate_unit_enum(
     )
 }
 
+#[allow(clippy::too_many_lines)]
 fn generate_enum_with_data_variants(
     analysis: &EnumAnalysis,
     enum_ident: &syn::Ident,

@@ -1,7 +1,7 @@
 use modular_bitfield::prelude::*;
 
 #[derive(Specifier)]
-#[variable_bits = 42]  // Invalid: should be list format
+#[bits = hello]  // Invalid: should be an integer
 enum TestData {
     #[discriminant = 0]
     Small(u8),
