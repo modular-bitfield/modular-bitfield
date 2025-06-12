@@ -8,8 +8,8 @@ use syn::parse::Result;
 /// Variable bits configuration for structs
 #[derive(Clone, Debug)]
 pub enum VariableBitsConfig {
-    Inferred,                    // #[variable_bits] - infer from variant data enum
-    Explicit(Vec<usize>),       // #[variable_bits = (32, 64, 96)]
+    Inferred,             // #[variable_bits] - infer from variant data enum
+    Explicit(Vec<usize>), // #[variable_bits = (32, 64, 96)]
 }
 
 impl VariableBitsConfig {

@@ -1,8 +1,7 @@
 use super::{
     config::{Config, ReprKind, VariableBitsConfig},
     field_info::FieldInfo,
-    VariableStructAnalysis,
-    BitfieldStruct,
+    BitfieldStruct, VariableStructAnalysis,
 };
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, quote_spanned};
@@ -11,27 +10,48 @@ use syn::{self, punctuated::Punctuated, spanned::Spanned as _, Token};
 impl BitfieldStruct {
     /// Expands the given `#[bitfield]` struct into an actual bitfield definition.
     pub fn expand(&self, config: &Config) -> TokenStream2 {
+        match self.try_expand(config) {
+            Ok(tokens) => tokens,
+            Err(err) => err.to_compile_error(),
+        }
+    }
+
+    /// Internal expansion that can return errors
+    fn try_expand(&self, config: &Config) -> syn::Result<TokenStream2> {
         let span = self.item_struct.span();
-        let check_filled = self.generate_check_for_filled(config);
         let struct_definition = self.generate_struct(config);
         let constructor_definition = self.generate_constructor(config);
         let specifier_impl = self.generate_specifier_impl(config);
 
-        let byte_conversion_impls = self.expand_byte_conversion_impls(config);
+        // Check if this is a variable-size struct
+        let is_variable_size = config.variable_bits.is_some();
+
+        // Only generate standard checks and conversions for non-variable structs
+        let check_filled = if !is_variable_size {
+            self.generate_check_for_filled(config)
+        } else {
+            quote! {}
+        };
+
+        let byte_conversion_impls = if !is_variable_size {
+            self.expand_byte_conversion_impls(config)
+        } else {
+            quote! {}
+        };
+
         let getters_and_setters = self.expand_getters_and_setters(config);
         let bytes_check = self.expand_optional_bytes_check(config);
         let repr_impls_and_checks = self.expand_repr_from_impls_and_checks(config);
         let debug_impl = self.generate_debug_impl(config);
 
         // New: Variable-size extensions
-        let variable_size_extensions = self.generate_variable_size_extensions(config)
-            .unwrap_or_else(|err| {
-                // Convert syn::Error to TokenStream
-                Some(err.to_compile_error())
-            })
-            .unwrap_or_else(|| quote! {});
+        let variable_size_extensions = match self.generate_variable_size_extensions(config) {
+            Ok(Some(tokens)) => tokens,
+            Ok(None) => quote! {},
+            Err(err) => return Err(err),
+        };
 
-        quote_spanned!(span=>
+        Ok(quote_spanned!(span=>
             #struct_definition
             #check_filled
             #constructor_definition
@@ -42,7 +62,7 @@ impl BitfieldStruct {
             #repr_impls_and_checks
             #debug_impl
             #variable_size_extensions
-        )
+        ))
     }
 
     /// Expands to the `Specifier` impl for the `#[bitfield]` struct if the
@@ -51,6 +71,11 @@ impl BitfieldStruct {
     /// Otherwise returns `None`.
     pub fn generate_specifier_impl(&self, config: &Config) -> Option<TokenStream2> {
         config.derive_specifier.as_ref()?;
+
+        // Check if this is a variable-size struct
+        if let Ok(Some(analysis)) = self.analyze_variable_bits(config) {
+            return Some(self.generate_variable_specifier_impl(&analysis));
+        }
 
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
@@ -359,6 +384,36 @@ impl BitfieldStruct {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+
+        // For variable-size structs, use the maximum size directly
+        let is_variable_size = config.variable_bits.is_some();
+        if is_variable_size {
+            if let Some(variable_config) = &config.variable_bits {
+                match &variable_config.value {
+                    VariableBitsConfig::Explicit(sizes) => {
+                        let max_size = sizes.iter().max().unwrap_or(&0);
+                        let max_bytes = (max_size + 7) / 8;
+                        return quote_spanned!(span=>
+                            impl #impl_generics #ident #ty_generics #where_clause
+                            {
+                                /// Returns an instance with zero initialized data.
+                                #[allow(clippy::identity_op)]
+                                #[allow(clippy::new_without_default)]
+                                #[must_use]
+                                pub const fn new() -> Self {
+                                    Self {
+                                        bytes: [0u8; #max_bytes],
+                                    }
+                                }
+                            }
+                        );
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Standard constructor for non-variable structs
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
         quote_spanned!(span=>
@@ -756,8 +811,64 @@ impl BitfieldStruct {
         )
     }
 
+    /// Generate Specifier implementation for variable-size structs
+    fn generate_variable_specifier_impl(&self, analysis: &VariableStructAnalysis) -> TokenStream2 {
+        let span = self.item_struct.span();
+        let ident = &self.item_struct.ident;
+        let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+
+        // Use maximum size for the Specifier trait
+        let max_bits = analysis.sizes.iter().max().unwrap_or(&0);
+        let max_bytes = (max_bits + 7) / 8;
+
+        quote_spanned!(span=>
+            #[allow(clippy::identity_op)]
+            const _: () = {
+                impl #impl_generics ::modular_bitfield::private::checks::CheckSpecifierHasAtMost128Bits for #ident #ty_generics #where_clause {
+                    type CheckType = [(); (#max_bits <= 128) as ::core::primitive::usize];
+                }
+            };
+
+            #[allow(clippy::identity_op)]
+            impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
+                const BITS: usize = #max_bits;
+
+                type Bytes = [u8; #max_bytes];
+                type InOut = Self;
+
+                #[inline]
+                fn into_bytes(
+                    value: Self::InOut,
+                ) -> ::core::result::Result<Self::Bytes, ::modular_bitfield::error::OutOfBounds> {
+                    // Use dynamic serialization based on discriminant
+                    let mut bytes = [0u8; #max_bytes];
+                    let size_bytes = value.required_bytes();
+
+                    if size_bytes <= #max_bytes {
+                        bytes[..size_bytes].copy_from_slice(&value.bytes[..size_bytes]);
+                        ::core::result::Result::Ok(bytes)
+                    } else {
+                        ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+                    }
+                }
+
+                #[inline]
+                fn from_bytes(
+                    bytes: Self::Bytes,
+                ) -> ::core::result::Result<Self::InOut, ::modular_bitfield::error::InvalidBitPattern<Self::Bytes>> {
+                    // Try to parse using dynamic method
+                    Self::from_bytes_dynamic(&bytes)
+                        .ok_or_else(|| ::modular_bitfield::error::InvalidBitPattern::new(bytes))
+                }
+            }
+        )
+    }
+
     /// Generate variable-size struct methods and types
-    fn generate_variable_size_extensions(&self, config: &Config) -> syn::Result<Option<TokenStream2>> {
+    fn generate_variable_size_extensions(
+        &self,
+        config: &Config,
+    ) -> syn::Result<Option<TokenStream2>> {
         let analysis = match self.analyze_variable_bits(config)? {
             Some(analysis) => analysis,
             None => return Ok(None), // Not a variable-size struct
@@ -793,10 +904,16 @@ impl BitfieldStruct {
         }))
     }
 
-    fn generate_size_specific_constructors(&self, analysis: &VariableStructAnalysis) -> syn::Result<TokenStream2> {
+    fn generate_size_specific_constructors(
+        &self,
+        analysis: &VariableStructAnalysis,
+    ) -> syn::Result<TokenStream2> {
+        // Calculate the maximum size in bytes for the struct
+        let max_size = analysis.sizes.iter().max().unwrap_or(&0);
+        let max_bytes = (max_size + 7) / 8;
+
         let constructors = analysis.sizes.iter().enumerate().map(|(_index, &size)| {
             let constructor_name = format_ident!("new_{}bit", size);
-            let size_bytes = (size + 7) / 8; // Round up to bytes
 
             quote! {
                 /// Creates a new instance with zero-initialized data for #size-bit configuration
@@ -804,7 +921,7 @@ impl BitfieldStruct {
                 #[must_use]
                 pub const fn #constructor_name() -> Self {
                     Self {
-                        bytes: [0u8; #size_bytes],
+                        bytes: [0u8; #max_bytes],  // Always use max size
                     }
                 }
             }
@@ -815,7 +932,10 @@ impl BitfieldStruct {
         })
     }
 
-    fn generate_variable_serialization(&self, analysis: &VariableStructAnalysis) -> syn::Result<TokenStream2> {
+    fn generate_variable_serialization(
+        &self,
+        analysis: &VariableStructAnalysis,
+    ) -> syn::Result<TokenStream2> {
         let _struct_ident = &self.item_struct.ident;
 
         // Generate size-specific into_bytes methods
@@ -871,7 +991,7 @@ impl BitfieldStruct {
         // Generate dynamic serialization methods
         let dynamic_into_bytes_arms = analysis.sizes.iter().enumerate().map(|(index, &size)| {
             let method_name = format_ident!("into_bytes_{}", size);
-            quote! { #index => self.#method_name().to_vec() }
+            quote! { #index => self.#method_name().to_vec(), }
         });
 
         let dynamic_from_bytes_methods = analysis.sizes.iter().enumerate().map(|(index, &size)| {
@@ -895,7 +1015,7 @@ impl BitfieldStruct {
             /// Converts to dynamically-sized byte vector based on current configuration
             pub fn into_bytes_dynamic(&self) -> ::std::vec::Vec<u8> {
                 match self.configuration_index() {
-                    #( #dynamic_into_bytes_arms ),*
+                    #( #dynamic_into_bytes_arms )*
                     _ => panic!("Invalid configuration index"),
                 }
             }
@@ -919,30 +1039,49 @@ impl BitfieldStruct {
         })
     }
 
-    fn generate_wire_format_helpers(&self, analysis: &VariableStructAnalysis) -> syn::Result<TokenStream2> {
+    fn generate_wire_format_helpers(
+        &self,
+        analysis: &VariableStructAnalysis,
+    ) -> syn::Result<TokenStream2> {
         // Find discriminator field name for helper generation
-        let discriminator_field = self.item_struct.fields.iter().nth(analysis.discriminator_field_index)
-            .ok_or_else(|| format_err!(self.item_struct.span(), "discriminator field index out of bounds"))?;
+        let discriminator_field = self
+            .item_struct
+            .fields
+            .iter()
+            .nth(analysis.discriminator_field_index)
+            .ok_or_else(|| {
+                format_err!(
+                    self.item_struct.span(),
+                    "discriminator field index out of bounds"
+                )
+            })?;
 
-        let discriminator_getter = discriminator_field.ident.as_ref()
+        let discriminator_getter = discriminator_field
+            .ident
+            .as_ref()
             .map(|name| format_ident!("{}", name))
             .unwrap_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index));
 
         // Generate fallback methods for different struct sizes
-        let fallback_methods = analysis.sizes.iter().enumerate().rev().map(|(_index, &size)| {
-            let method_name = format_ident!("from_bytes_{}", size);
-            let size_bytes = (size + 7) / 8;
+        let fallback_methods = analysis
+            .sizes
+            .iter()
+            .enumerate()
+            .rev()
+            .map(|(_index, &size)| {
+                let method_name = format_ident!("from_bytes_{}", size);
+                let size_bytes = (size + 7) / 8;
 
-            quote! {
-                if bytes.len() >= #size_bytes {
-                    if let Ok(array) = bytes[..#size_bytes].try_into() {
-                        if let Ok(instance) = Self::#method_name(array) {
-                            return ::core::option::Option::Some(instance);
+                quote! {
+                    if bytes.len() >= #size_bytes {
+                        if let Ok(array) = bytes[..#size_bytes].try_into() {
+                            if let Ok(instance) = Self::#method_name(array) {
+                                return ::core::option::Option::Some(instance);
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
 
         Ok(quote! {
             /// Extract discriminant value from raw bytes (protocol-specific implementation)
@@ -969,42 +1108,124 @@ impl BitfieldStruct {
         })
     }
 
-    fn generate_variable_helper_methods(&self, analysis: &VariableStructAnalysis) -> syn::Result<TokenStream2> {
+    fn generate_variable_helper_methods(
+        &self,
+        analysis: &VariableStructAnalysis,
+    ) -> syn::Result<TokenStream2> {
         // Get discriminator field info by index
-        let discriminator_field = self.item_struct.fields.iter().nth(analysis.discriminator_field_index)
-            .ok_or_else(|| format_err!(self.item_struct.span(), "discriminator field index out of bounds"))?;
+        let discriminator_field = self
+            .item_struct
+            .fields
+            .iter()
+            .nth(analysis.discriminator_field_index)
+            .ok_or_else(|| {
+                format_err!(
+                    self.item_struct.span(),
+                    "discriminator field index out of bounds"
+                )
+            })?;
 
-        let discriminator_getter = discriminator_field.ident.as_ref()
+        let discriminator_getter = discriminator_field
+            .ident
+            .as_ref()
             .map(|name| format_ident!("{}", name))
             .unwrap_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index));
 
         // Generate configuration index mapping
         let config_index_arms = (0..analysis.sizes.len()).map(|index| {
-            quote! { #index => #index }
+            quote! { #index => #index, }
         });
 
         // Generate size lookup
-        let size_match_arms: Vec<_> = analysis.sizes.iter().enumerate().map(|(index, &size)| {
-            quote! { #index => #size }
-        }).collect();
+        let size_match_arms: Vec<_> = analysis
+            .sizes
+            .iter()
+            .enumerate()
+            .map(|(index, &size)| {
+                quote! { #index => #size, }
+            })
+            .collect();
 
-        let supported_sizes: Vec<_> = analysis.sizes.iter().map(|&size| {
-            quote! { #size }
-        }).collect();
+        // Generate size lookup with Option return
+        let size_option_match_arms: Vec<_> = analysis
+            .sizes
+            .iter()
+            .enumerate()
+            .map(|(index, &size)| {
+                quote! { #index => ::core::option::Option::Some(#size), }
+            })
+            .collect();
+
+        let supported_sizes: Vec<_> = analysis
+            .sizes
+            .iter()
+            .map(|&size| {
+                quote! { #size }
+            })
+            .collect();
+
+        // Generate discriminant-based methods for the public API
+        let _struct_ident = &self.item_struct.ident;
+        let max_bytes = (analysis.sizes.iter().max().unwrap_or(&0) + 7) / 8;
+
+        // Calculate the bit offset and mask for discriminant extraction
+        // For MIDI UMP, discriminant is in first 4 bits (LSB in little-endian)
+        let discriminant_bits = analysis.discriminator_bits;
+        let _discriminant_mask = (1u8 << discriminant_bits) - 1;
+
+        // Collect iterators into vectors to avoid move issues
+        let _config_index_arms_vec: Vec<_> = config_index_arms.collect();
 
         Ok(quote! {
-            /// Get the configuration index based on the discriminant value
-            pub fn configuration_index(&self) -> usize {
-                match self.#discriminator_getter() as usize {
-                    #( #config_index_arms ),*
-                    _ => panic!("Invalid discriminant value"),
+            /// Get the discriminant value from this message
+            pub fn discriminant(&self) -> u16 {
+                self.#discriminator_getter() as u16
+            }
+
+            /// Get the size in bits for this message
+            pub fn size(&self) -> usize {
+                self.actual_size()
+            }
+
+            /// Returns the underlying bits.
+            ///
+            /// # Layout
+            ///
+            /// The returned byte array is layed out in the same way as described
+            /// [here](https://docs.rs/modular-bitfield/#generated-structure).
+            #[inline]
+            #[allow(clippy::identity_op)]
+            pub const fn into_bytes(self) -> [::core::primitive::u8; #max_bytes] {
+                self.bytes
+            }
+
+            /// Converts the given bytes directly into the bitfield struct.
+            #[inline]
+            #[allow(clippy::identity_op)]
+            #[must_use]
+            pub const fn from_bytes(bytes: [::core::primitive::u8; #max_bytes]) -> Self {
+                Self { bytes }
+            }
+
+            /// Get the size in bits for a given discriminant value
+            pub fn size_for_discriminant(discriminant: u16) -> ::core::option::Option<usize> {
+                match discriminant as usize {
+                    #( #size_option_match_arms )*
+                    _ => ::core::option::Option::None,
                 }
             }
 
+            /// Get the configuration index based on the discriminant value
+            fn configuration_index(&self) -> usize {
+                // For now, return the discriminant value directly as index
+                // This assumes discriminant values correspond to configuration indices
+                self.#discriminator_getter() as usize
+            }
+
             /// Get the actual bit size for the current configuration
-            pub fn actual_size(&self) -> usize {
+            fn actual_size(&self) -> usize {
                 match self.configuration_index() {
-                    #( #size_match_arms ),*
+                    #( #size_match_arms )*
                     _ => panic!("Invalid configuration index"),
                 }
             }
@@ -1012,7 +1233,7 @@ impl BitfieldStruct {
             /// Get the expected total size for a given configuration index
             pub const fn size_for_config(config_index: usize) -> ::core::option::Option<usize> {
                 match config_index {
-                    #( #size_match_arms ),*
+                    #( #size_option_match_arms )*
                     _ => ::core::option::Option::None,
                 }
             }
@@ -1029,27 +1250,35 @@ impl BitfieldStruct {
         })
     }
 
-    fn generate_variable_validations(&self, analysis: &VariableStructAnalysis) -> syn::Result<TokenStream2> {
+    fn generate_variable_validations(
+        &self,
+        analysis: &VariableStructAnalysis,
+    ) -> syn::Result<TokenStream2> {
         let _struct_ident = &self.item_struct.ident;
         let _data_enum_type = &analysis.data_enum_type;
 
         // Generate compile-time validation that data enum supports required sizes
         let fixed_bits = analysis.fixed_bits;
-        let data_size_validations = analysis.sizes.iter().enumerate().map(|(_index, &total_size)| {
-            let _expected_data_size = total_size - fixed_bits;
+        let data_size_validations =
+            analysis
+                .sizes
+                .iter()
+                .enumerate()
+                .map(|(_index, &total_size)| {
+                    let _expected_data_size = total_size - fixed_bits;
 
-            quote! {
-                const _: () = {
-                    // Validate that data enum can support the required size for configuration #index
-                    const TOTAL_SIZE: usize = #total_size;
-                    const FIXED_BITS: usize = #fixed_bits;
-                    const EXPECTED_DATA_SIZE: usize = TOTAL_SIZE - FIXED_BITS;
+                    quote! {
+                        const _: () = {
+                            // Validate that data enum can support the required size for configuration #index
+                            const TOTAL_SIZE: usize = #total_size;
+                            const FIXED_BITS: usize = #fixed_bits;
+                            const EXPECTED_DATA_SIZE: usize = TOTAL_SIZE - FIXED_BITS;
 
-                    // This will be validated when data enum is compiled
-                    // The data enum must have a variant that matches EXPECTED_DATA_SIZE
-                };
-            }
-        });
+                            // This will be validated when data enum is compiled
+                            // The data enum must have a variant that matches EXPECTED_DATA_SIZE
+                        };
+                    }
+                });
 
         Ok(quote! {
             // Compile-time validations

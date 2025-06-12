@@ -1,5 +1,5 @@
-use proc_macro2::Span;
 use crate::errors::CombineError;
+use proc_macro2::Span;
 
 /// Errors specific to variable bits functionality
 #[allow(dead_code)]
@@ -40,14 +40,24 @@ pub enum VariableBitsError {
 impl VariableBitsError {
     pub fn to_syn_error(self) -> syn::Error {
         match self {
-            Self::TupleSizeMismatch { expected, found, span } => {
+            Self::TupleSizeMismatch {
+                expected,
+                found,
+                span,
+            } => {
                 format_err!(
                     span,
                     "variable_bits tuple must have {} elements (one per variant), found {}",
-                    expected, found
+                    expected,
+                    found
                 )
             }
-            Self::DataTypeSizeMismatch { variant_name, expected_bits, actual_bits, span } => {
+            Self::DataTypeSizeMismatch {
+                variant_name,
+                expected_bits,
+                actual_bits,
+                span,
+            } => {
                 format_err!(
                     span,
                     "variant {} data type {} must have exactly {} bits for variable_bits compatibility",
@@ -61,29 +71,40 @@ impl VariableBitsError {
                     field_type
                 )
             }
-            Self::MultipleVariantFields { field_type, first_span, second_span } => {
-                format_err!(
-                    second_span,
-                    "found multiple #[variant_{}] fields, only one allowed",
-                    field_type
-                ).into_combine(format_err!(
-                    first_span,
-                    "first #[variant_{}] field declared here",
-                    field_type
-                ))
-            }
-            Self::InvalidDiscriminantRange { discriminant, max_allowed, discriminator_bits, span } => {
+            Self::MultipleVariantFields {
+                field_type,
+                first_span,
+                second_span,
+            } => format_err!(
+                second_span,
+                "found multiple #[variant_{}] fields, only one allowed",
+                field_type
+            )
+            .into_combine(format_err!(
+                first_span,
+                "first #[variant_{}] field declared here",
+                field_type
+            )),
+            Self::InvalidDiscriminantRange {
+                discriminant,
+                max_allowed,
+                discriminator_bits,
+                span,
+            } => {
                 format_err!(
                     span,
                     "discriminant value {} exceeds maximum {} for {}-bit discriminator field",
-                    discriminant, max_allowed, discriminator_bits
+                    discriminant,
+                    max_allowed,
+                    discriminator_bits
                 )
             }
             Self::ConflictingAttributes { attr1, attr2, span } => {
                 format_err!(
                     span,
                     "cannot use both #[{}] and #[{}] on the same item",
-                    attr1, attr2
+                    attr1,
+                    attr2
                 )
             }
         }

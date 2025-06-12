@@ -1,8 +1,8 @@
+use crate::bitfield::{VariableBitsConfig, VariableBitsError};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
-use syn::spanned::Spanned as _;
-use crate::bitfield::{VariableBitsConfig, VariableBitsError};
 use std::collections::HashSet;
+use syn::spanned::Spanned as _;
 
 pub fn generate(input: TokenStream2) -> TokenStream2 {
     match generate_or_error(input) {
@@ -35,42 +35,45 @@ fn generate_or_error(input: TokenStream2) -> syn::Result<TokenStream2> {
 }
 
 enum VariantType {
-    Unit,                           // No data
-    Data(Box<syn::Type>),          // Has data of specified type
+    Unit,                 // No data
+    Data(Box<syn::Type>), // Has data of specified type
 }
 
 struct EnumVariant {
     name: syn::Ident,
     variant_type: VariantType,
-    discriminant: Option<usize>,    // From #[discriminant = N]
-    explicit_bits: Option<usize>,   // From #[bits = N] on variant
+    discriminant: Option<usize>,  // From #[discriminant = N]
+    explicit_bits: Option<usize>, // From #[bits = N] on variant
     span: proc_macro2::Span,
 }
 
 struct EnumAnalysis {
     variants: Vec<EnumVariant>,
     total_bits: usize,
-    has_data_variants: bool,       // True if any variant has data
+    has_data_variants: bool, // True if any variant has data
 }
 
 struct Attributes {
     bits: Option<usize>,
     variable_bits: Option<VariableBitsConfig>,
+    discriminant_bits: Option<usize>, // For #[discriminant_bits = N]
 }
 
 struct VariableEnumAnalysis {
     variants: Vec<EnumVariant>,
-    variant_sizes: Vec<usize>,      // Sizes for each variant (parallel to variants)
-    max_size: usize,                // Maximum variant size
-    _has_discriminants: bool,       // True if any variant has explicit discriminant
+    variant_sizes: Vec<usize>, // Sizes for each variant (parallel to variants)
+    max_size: usize,           // Maximum variant size
+    _has_discriminants: bool,  // True if any variant has explicit discriminant
+    discriminant_bits: Option<usize>, // External discriminant bits (from parent struct)
 }
 
 fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
-    let mut attributes = Attributes { 
+    let mut attributes = Attributes {
         bits: None,
         variable_bits: None,
+        discriminant_bits: None,
     };
-    
+
     for attr in attrs {
         if attr.path().is_ident("bits") {
             if attributes.bits.is_some() {
@@ -108,23 +111,22 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                 syn::Meta::List(meta_list) => {
                     // #[variable_bits(24, 56, 88)]
                     let mut sizes = Vec::new();
-                    
+
                     // Parse the tokens manually since parse_nested_meta doesn't work well with literals
                     let parser = |input: syn::parse::ParseStream<'_>| {
                         let punctuated: syn::punctuated::Punctuated<syn::LitInt, syn::Token![,]> =
-                            input.parse_terminated(|stream| stream.parse::<syn::LitInt>(), syn::Token![,])?;
+                            input.parse_terminated(
+                                |stream| stream.parse::<syn::LitInt>(),
+                                syn::Token![,],
+                            )?;
                         Ok(punctuated)
                     };
-                    
+
                     let literals = meta_list.parse_args_with(parser)?;
-                    
+
                     for lit in literals {
                         let size = lit.base10_parse::<usize>().map_err(|err| {
-                            format_err_spanned!(
-                                lit,
-                                "invalid integer in variable_bits: {}",
-                                err
-                            )
+                            format_err_spanned!(lit, "invalid integer in variable_bits: {}", err)
                         })?;
                         if size == 0 {
                             return Err(format_err_spanned!(
@@ -167,6 +169,33 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                     ));
                 }
             }
+        } else if attr.path().is_ident("discriminant_bits") {
+            if attributes.discriminant_bits.is_some() {
+                return Err(format_err_spanned!(
+                    attr,
+                    "More than one 'discriminant_bits' attribute is not permitted",
+                ));
+            }
+            let meta = attr.meta.require_name_value()?;
+            attributes.discriminant_bits = if let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Int(lit),
+                ..
+            }) = &meta.value
+            {
+                let bits = lit.base10_parse::<usize>()?;
+                if bits == 0 || bits > 64 {
+                    return Err(format_err_spanned!(
+                        lit,
+                        "discriminant_bits must be between 1 and 64",
+                    ));
+                }
+                Some(bits)
+            } else {
+                return Err(format_err_spanned!(
+                    attr,
+                    "discriminant_bits must be in form #[discriminant_bits = N]",
+                ));
+            };
         }
     }
     Ok(attributes)
@@ -187,8 +216,10 @@ fn parse_variant_attrs(variant: &syn::Variant) -> syn::Result<(Option<usize>, Op
 
             let meta = attr.meta.require_name_value()?;
             if let syn::Expr::Lit(syn::ExprLit {
-                lit: syn::Lit::Int(lit), ..
-            }) = &meta.value {
+                lit: syn::Lit::Int(lit),
+                ..
+            }) = &meta.value
+            {
                 discriminant = Some(lit.base10_parse::<usize>()?);
             } else {
                 return Err(format_err_spanned!(
@@ -206,8 +237,10 @@ fn parse_variant_attrs(variant: &syn::Variant) -> syn::Result<(Option<usize>, Op
 
             let meta = attr.meta.require_name_value()?;
             if let syn::Expr::Lit(syn::ExprLit {
-                lit: syn::Lit::Int(lit), ..
-            }) = &meta.value {
+                lit: syn::Lit::Int(lit),
+                ..
+            }) = &meta.value
+            {
                 explicit_bits = Some(lit.base10_parse::<usize>()?);
             } else {
                 return Err(format_err_spanned!(
@@ -232,15 +265,16 @@ fn validate_discriminant_values(variants: &[EnumVariant]) -> syn::Result<()> {
             return Err(format_err!(
                 variant.span,
                 "duplicate discriminant value {} (variant {} conflicts with previous variant)",
-                discriminant, variant.name
+                discriminant,
+                variant.name
             ));
         }
 
-        // Validate discriminant is reasonable (< 256 for now)
-        if discriminant > 255 {
+        // Validate discriminant is reasonable (< 65536)
+        if discriminant > 65535 {
             return Err(format_err!(
                 variant.span,
-                "discriminant value {} too large (maximum 255 supported)",
+                "discriminant value {} too large (maximum 65535 supported)",
                 discriminant
             ));
         }
@@ -253,7 +287,9 @@ fn analyze_variable_enum(
     input: &syn::ItemEnum,
     attributes: &Attributes,
 ) -> syn::Result<VariableEnumAnalysis> {
-    let variable_bits_config = attributes.variable_bits.as_ref()
+    let variable_bits_config = attributes
+        .variable_bits
+        .as_ref()
         .ok_or_else(|| format_err!(input, "variable enum requires #[variable_bits] attribute"))?;
 
     // Parse all variants with their attributes
@@ -298,7 +334,8 @@ fn analyze_variable_enum(
                     expected: variants.len(),
                     found: tuple_sizes.len(),
                     span: input.span(),
-                }.to_syn_error());
+                }
+                .to_syn_error());
             }
 
             // Cross-validate with any explicit #[bits = N] on variants
@@ -309,7 +346,9 @@ fn analyze_variable_enum(
                         return Err(format_err!(
                             variant.span,
                             "variant #[bits = {}] conflicts with tuple position {} size {}",
-                            explicit_bits, index, tuple_bits
+                            explicit_bits,
+                            index,
+                            tuple_bits
                         ));
                     }
                 }
@@ -358,6 +397,7 @@ fn analyze_variable_enum(
         variant_sizes,
         max_size,
         _has_discriminants: has_discriminants,
+        discriminant_bits: attributes.discriminant_bits,
     })
 }
 
@@ -373,13 +413,18 @@ fn generate_variable_enum_specifier_impl(
 
     // Determine the Bytes type based on max size
     let bytes_type = match max_size {
-        0 => quote! { u8 },      // Handle all-unit enums
+        0 => quote! { u8 }, // Handle all-unit enums
         1..=8 => quote! { u8 },
         9..=16 => quote! { u16 },
         17..=32 => quote! { u32 },
         33..=64 => quote! { u64 },
         65..=128 => quote! { u128 },
-        _ => return Err(format_err!(span, "enum requires more than 128 bits, which is not supported")),
+        _ => {
+            return Err(format_err!(
+                span,
+                "enum requires more than 128 bits, which is not supported"
+            ))
+        }
     };
 
     // Generate compile-time assertions for data type sizes
@@ -422,21 +467,28 @@ fn generate_variable_enum_specifier_impl(
                 )
             },
             VariantType::Data(data_type) => {
-                // Add validation that data fits in the specified bit size
-                let max_value = if variant_size < 64 {
-                    quote! { ((1u64 << #variant_size) - 1) as #data_type }
-                } else {
-                    quote! { #data_type::MAX }
-                };
-                
                 quote_spanned!(variant_span=>
                     Self::#variant_name(data) => {
-                        // Validate that data fits in the specified bit size
-                        if data <= #max_value {
-                            <#data_type as ::modular_bitfield::Specifier>::into_bytes(data).map(|data_bytes| data_bytes as #bytes_type)
+                        // Convert using the Specifier trait implementation
+                        let data_bytes = <#data_type as ::modular_bitfield::Specifier>::into_bytes(data)?;
+
+                        // Validate that the data fits within the variant's bit size
+                        let variant_max_value = if #variant_size == 0 {
+                            0
+                        } else if #variant_size >= 64 {
+                            // For 64+ bits, we can't easily compute the max value,
+                            // so we rely on the underlying type validation
+                            data_bytes as u128
                         } else {
-                            ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds)
+                            (1u128 << #variant_size) - 1
+                        };
+
+                        let data_value = data_bytes as u128;
+                        if #variant_size > 0 && #variant_size < 64 && data_value > variant_max_value {
+                            return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds);
                         }
+
+                        ::core::result::Result::Ok(data_bytes as #bytes_type)
                     }
                 )
             }
@@ -453,11 +505,22 @@ fn generate_variable_enum_specifier_impl(
                 quote_spanned!(variant_span=>
                     _ => ::core::result::Result::Ok(Self::#variant_name)
                 )
-            },
+            }
             VariantType::Data(data_type) => {
+                // Get the size for the first variant
+                let first_variant_size = analysis.variant_sizes[0];
+                let data_bytes_cast = match first_variant_size {
+                    0..=8 => quote! { bytes as u8 },
+                    9..=16 => quote! { bytes as u16 },
+                    17..=32 => quote! { bytes as u32 },
+                    33..=64 => quote! { bytes as u64 },
+                    65..=128 => quote! { bytes as u128 },
+                    _ => quote! { bytes },
+                };
+
                 quote_spanned!(variant_span=>
                     bytes => {
-                        match <#data_type as ::modular_bitfield::Specifier>::from_bytes(bytes as <#data_type as ::modular_bitfield::Specifier>::Bytes) {
+                        match <#data_type as ::modular_bitfield::Specifier>::from_bytes(#data_bytes_cast) {
                             ::core::result::Result::Ok(data) => ::core::result::Result::Ok(Self::#variant_name(data)),
                             ::core::result::Result::Err(_) => ::core::result::Result::Err(::modular_bitfield::error::InvalidBitPattern::new(bytes)),
                         }
@@ -505,32 +568,53 @@ fn generate_enum_discriminant_helpers(
     analysis: &VariableEnumAnalysis,
     enum_ident: &syn::Ident,
 ) -> syn::Result<TokenStream2> {
+    // Check if this enum uses external discriminant bits
+    if let Some(discriminant_bits) = analysis.discriminant_bits {
+        // Generate methods for external discriminant handling
+        return generate_external_discriminant_helpers(analysis, enum_ident, discriminant_bits);
+    }
+
     // Generate size lookup by discriminant
-    let size_match_arms: Vec<_> = analysis.variants.iter().enumerate().map(|(index, variant)| {
-        let discriminant = variant.discriminant.unwrap_or(index);
-        let size = analysis.variant_sizes[index];
-        quote! { #discriminant => ::core::option::Option::Some(#size) }
-    }).collect();
+    let size_match_arms: Vec<_> = analysis
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| {
+            let discriminant = variant.discriminant.unwrap_or(index);
+            let size = analysis.variant_sizes[index];
+            quote! { #discriminant => ::core::option::Option::Some(#size) }
+        })
+        .collect();
 
     // Generate discriminant lookup by variant
-    let discriminant_match_arms: Vec<_> = analysis.variants.iter().enumerate().map(|(index, variant)| {
-        let variant_name = &variant.name;
-        let discriminant = variant.discriminant.unwrap_or(index);
-        match &variant.variant_type {
-            VariantType::Unit => quote! { Self::#variant_name => #discriminant },
-            VariantType::Data(_) => quote! { Self::#variant_name(_) => #discriminant },
-        }
-    }).collect();
+    let discriminant_match_arms: Vec<_> = analysis
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| {
+            let variant_name = &variant.name;
+            let discriminant = variant.discriminant.unwrap_or(index);
+            match &variant.variant_type {
+                VariantType::Unit => quote! { Self::#variant_name => #discriminant },
+                VariantType::Data(_) => quote! { Self::#variant_name(_) => #discriminant },
+            }
+        })
+        .collect();
 
     // Generate size lookup by variant
-    let size_by_variant_arms: Vec<_> = analysis.variants.iter().enumerate().map(|(index, variant)| {
-        let variant_name = &variant.name;
-        let size = analysis.variant_sizes[index];
-        match &variant.variant_type {
-            VariantType::Unit => quote! { Self::#variant_name => #size },
-            VariantType::Data(_) => quote! { Self::#variant_name(_) => #size },
-        }
-    }).collect();
+    let size_by_variant_arms: Vec<_> = analysis
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| {
+            let variant_name = &variant.name;
+            let size = analysis.variant_sizes[index];
+            match &variant.variant_type {
+                VariantType::Unit => quote! { Self::#variant_name => #size },
+                VariantType::Data(_) => quote! { Self::#variant_name(_) => #size },
+            }
+        })
+        .collect();
 
     // Generate from_discriminant_and_bytes
     let from_discriminant_arms: Vec<_> = analysis.variants.iter().enumerate().map(|(index, variant)| {
@@ -544,9 +628,20 @@ fn generate_enum_discriminant_helpers(
                 }
             }
             VariantType::Data(data_type) => {
+                // Get the size for this variant
+                let variant_size = analysis.variant_sizes[index];
+                let data_bytes_cast = match variant_size {
+                    0..=8 => quote! { bytes as u8 },
+                    9..=16 => quote! { bytes as u16 },
+                    17..=32 => quote! { bytes as u32 },
+                    33..=64 => quote! { bytes as u64 },
+                    65..=128 => quote! { bytes as u128 },
+                    _ => quote! { bytes },
+                };
+
                 quote! {
                     #discriminant => {
-                        match <#data_type as ::modular_bitfield::Specifier>::from_bytes(bytes as <#data_type as ::modular_bitfield::Specifier>::Bytes) {
+                        match <#data_type as ::modular_bitfield::Specifier>::from_bytes(#data_bytes_cast) {
                             ::core::result::Result::Ok(data) => ::core::result::Result::Ok(Self::#variant_name(data)),
                             ::core::result::Result::Err(_) => ::core::result::Result::Err(::modular_bitfield::error::InvalidBitPattern::new(bytes)),
                         }
@@ -557,19 +652,31 @@ fn generate_enum_discriminant_helpers(
     }).collect();
 
     // Generate the supported discriminants and sizes arrays
-    let supported_discriminants: Vec<_> = analysis.variants.iter().enumerate().map(|(index, variant)| {
-        let discriminant = variant.discriminant.unwrap_or(index) as u8;
-        quote! { #discriminant }
-    }).collect();
+    #[allow(clippy::cast_possible_truncation)]
+    let supported_discriminants: Vec<_> = analysis
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| {
+            let discriminant = variant.discriminant.unwrap_or(index);
+            // Safe cast: discriminant values are validated to be ≤ 65535 in validate_discriminant_values
+            let discriminant_u16 = discriminant as u16;
+            quote! { #discriminant_u16 }
+        })
+        .collect();
 
-    let supported_sizes: Vec<_> = analysis.variant_sizes.iter().map(|&size| {
-        quote! { #size }
-    }).collect();
+    let supported_sizes: Vec<_> = analysis
+        .variant_sizes
+        .iter()
+        .map(|&size| {
+            quote! { #size }
+        })
+        .collect();
 
     Ok(quote! {
         impl #enum_ident {
             /// Get the expected size in bits for a given discriminant value
-            pub const fn size_for_discriminant(discriminant: u8) -> ::core::option::Option<usize> {
+            pub const fn size_for_discriminant(discriminant: u16) -> ::core::option::Option<usize> {
                 match discriminant as usize {
                     #( #size_match_arms, )*
                     _ => ::core::option::Option::None,
@@ -577,10 +684,13 @@ fn generate_enum_discriminant_helpers(
             }
 
             /// Get the discriminant value for this variant
-            pub const fn discriminant(&self) -> u8 {
+            #[allow(clippy::cast_possible_truncation)]
+            pub const fn discriminant(&self) -> u16 {
+                // Note: discriminant values are validated to be ≤ 65535 in validate_discriminant_values
+                // but we still need to cast since the match returns usize literals
                 (match self {
                     #( #discriminant_match_arms, )*
-                }) as u8
+                }) as u16
             }
 
             /// Get the actual size in bits of this variant's data
@@ -600,7 +710,7 @@ fn generate_enum_discriminant_helpers(
             /// The constructed enum variant, or an error if the discriminant is invalid
             /// or the bytes cannot be parsed for the target variant type.
             pub fn from_discriminant_and_bytes(
-                discriminant: u8,
+                discriminant: u16,
                 bytes: <Self as ::modular_bitfield::Specifier>::Bytes
             ) -> ::core::result::Result<Self, ::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>> {
                 match discriminant as usize {
@@ -610,7 +720,7 @@ fn generate_enum_discriminant_helpers(
             }
 
             /// Get all supported discriminant values for this enum
-            pub const fn supported_discriminants() -> &'static [u8] {
+            pub const fn supported_discriminants() -> &'static [u16] {
                 &[#( #supported_discriminants ),*]
             }
 
@@ -622,21 +732,59 @@ fn generate_enum_discriminant_helpers(
     })
 }
 
+fn generate_external_discriminant_helpers(
+    _analysis: &VariableEnumAnalysis,
+    enum_ident: &syn::Ident,
+    discriminant_bits: usize,
+) -> syn::Result<TokenStream2> {
+    let span = enum_ident.span();
+
+    // Generate methods specific to external discriminant handling
+    Ok(quote_spanned!(span=>
+        impl #enum_ident {
+            /// Get the number of discriminant bits expected from parent
+            pub const fn discriminant_bits() -> usize {
+                #discriminant_bits
+            }
+
+            /// Check if this enum uses external discriminant
+            pub const fn uses_external_discriminant() -> bool {
+                true
+            }
+        }
+    ))
+}
+
 fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<EnumAnalysis> {
     let span = input.span();
-    
+
     // Check if any variants have data
-    let has_data_variants = input.variants.iter()
+    let has_data_variants = input
+        .variants
+        .iter()
         .any(|v| !matches!(v.fields, syn::Fields::Unit));
-    
+
     if has_data_variants {
         // Data variants require explicit bits specification
+        if attributes.variable_bits.is_some() {
+            // Variable bits enum - use different analysis path
+            return Err(format_err!(
+                span,
+                "variable bits enum detected - should use analyze_variable_enum"
+            ));
+        }
+
         let total_bits = attributes.bits.ok_or_else(|| {
-            format_err!(span, "enums with data variants must specify #[bits = N]")
+            format_err!(
+                span,
+                "enums with data variants must specify #[bits = N] or #[variable_bits(...)]"
+            )
         })?;
-        
+
         // Classify each variant
-        let variants = input.variants.iter()
+        let variants = input
+            .variants
+            .iter()
             .map(|variant| {
                 let variant_type = match &variant.fields {
                     syn::Fields::Unit => VariantType::Unit,
@@ -656,9 +804,9 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
                         ));
                     }
                 };
-                
+
                 let (discriminant, explicit_bits) = parse_variant_attrs(variant)?;
-                
+
                 Ok(EnumVariant {
                     name: variant.ident.clone(),
                     variant_type,
@@ -668,7 +816,7 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
                 })
             })
             .collect::<syn::Result<Vec<_>>>()?;
-            
+
         Ok(EnumAnalysis {
             variants,
             total_bits,
@@ -697,8 +845,10 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
                 ));
             }
         };
-        
-        let variants = input.variants.iter()
+
+        let variants = input
+            .variants
+            .iter()
             .map(|variant| {
                 let (discriminant, explicit_bits) = parse_variant_attrs(variant)?;
                 Ok(EnumVariant {
@@ -710,7 +860,7 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
                 })
             })
             .collect::<syn::Result<Vec<_>>>()?;
-            
+
         Ok(EnumAnalysis {
             variants,
             total_bits,
@@ -718,7 +868,6 @@ fn analyze_enum(input: &syn::ItemEnum, attributes: &Attributes) -> syn::Result<E
         })
     }
 }
-
 
 fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     let attributes = parse_attrs(&input.attrs)?;
@@ -729,17 +878,36 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     if attributes.variable_bits.is_some() {
         // Use variable enum analysis and generation
         let variable_analysis = analyze_variable_enum(input, &attributes)?;
-        generate_variable_enum_specifier_impl(&variable_analysis, enum_ident, &impl_generics, &ty_generics, where_clause)
+        generate_variable_enum_specifier_impl(
+            &variable_analysis,
+            enum_ident,
+            &impl_generics,
+            &ty_generics,
+            where_clause,
+        )
     } else {
         // Use the analyze_enum function to handle both unit and data variants
         let analysis = analyze_enum(input, &attributes)?;
 
         if analysis.has_data_variants {
             // Generate code for enums with data variants - external discrimination
-            generate_enum_with_data_variants(&analysis, enum_ident, &impl_generics, &ty_generics, where_clause)
+            generate_enum_with_data_variants(
+                &analysis,
+                enum_ident,
+                &impl_generics,
+                &ty_generics,
+                where_clause,
+            )
         } else {
             // Generate code for unit-only enums (existing logic)
-            Ok(generate_unit_enum(input, &analysis, enum_ident, &impl_generics, &ty_generics, where_clause))
+            Ok(generate_unit_enum(
+                input,
+                &analysis,
+                enum_ident,
+                &impl_generics,
+                &ty_generics,
+                where_clause,
+            ))
         }
     }
 }
@@ -755,7 +923,9 @@ fn generate_unit_enum(
     let span = input.span();
     let bits = analysis.total_bits;
 
-    let variants = analysis.variants.iter()
+    let variants = analysis
+        .variants
+        .iter()
         .map(|variant| &variant.name)
         .collect::<Vec<_>>();
 
@@ -821,7 +991,12 @@ fn generate_enum_with_data_variants(
         17..=32 => quote! { u32 },
         33..=64 => quote! { u64 },
         65..=128 => quote! { u128 },
-        _ => return Err(format_err!(span, "enum requires more than 128 bits, which is not supported")),
+        _ => {
+            return Err(format_err!(
+                span,
+                "enum requires more than 128 bits, which is not supported"
+            ))
+        }
     };
 
     // For external discrimination, we just convert directly between each variant
@@ -829,7 +1004,7 @@ fn generate_enum_with_data_variants(
     let into_bytes_arms = analysis.variants.iter().map(|variant| {
         let variant_name = &variant.name;
         let variant_span = variant_name.span();
-        
+
         match &variant.variant_type {
             VariantType::Unit => {
                 // Unit variant: all bits zero
@@ -856,18 +1031,20 @@ fn generate_enum_with_data_variants(
     // User is responsible for using the correct constructor based on external information
 
     // Generate const assertions to validate all data types have the same BITS as the enum
-    let data_types: Vec<_> = analysis.variants.iter().filter_map(|variant| {
-        match &variant.variant_type {
+    let data_types: Vec<_> = analysis
+        .variants
+        .iter()
+        .filter_map(|variant| match &variant.variant_type {
             VariantType::Data(data_type) => Some(&**data_type),
             VariantType::Unit => None,
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     let const_assertions = if data_types.is_empty() {
         vec![]
     } else {
         let mut assertions = vec![];
-        
+
         // All data types must have the same BITS as the enum
         for data_type in &data_types {
             assertions.push(quote! {
@@ -875,7 +1052,7 @@ fn generate_enum_with_data_variants(
                     // Debug: let's see what the actual values are
                     const DATA_TYPE_BITS: usize = <#data_type as ::modular_bitfield::Specifier>::BITS;
                     const TOTAL_BITS: usize = #total_bits;
-                    
+
                     assert!(
                         DATA_TYPE_BITS == TOTAL_BITS,
                         "All data variant types must have the same BITS as the enum total"
@@ -892,13 +1069,13 @@ fn generate_enum_with_data_variants(
     let first_arm = if let Some(first_variant) = analysis.variants.first() {
         let variant_name = &first_variant.name;
         let variant_span = variant_name.span();
-        
+
         match &first_variant.variant_type {
             VariantType::Unit => {
                 quote_spanned!(variant_span=>
                     _ => ::core::result::Result::Ok(Self::#variant_name)
                 )
-            },
+            }
             VariantType::Data(data_type) => {
                 let data_type = &**data_type;
                 quote_spanned!(variant_span=>
@@ -915,7 +1092,7 @@ fn generate_enum_with_data_variants(
 
     Ok(quote_spanned!(span=>
         #( #const_assertions )*
-        
+
         impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
             const BITS: usize = #total_bits;
             type Bytes = #bytes_type;

@@ -9,7 +9,9 @@ pub struct ParamArgs {
 
 impl syn::parse::Parse for ParamArgs {
     fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
-        let punctuated = <syn::punctuated::Punctuated<syn::Meta, syn::Token![,]>>::parse_terminated(input)?;
+        // Back to original implementation
+        let punctuated =
+            <syn::punctuated::Punctuated<syn::Meta, syn::Token![,]>>::parse_terminated(input)?;
         Ok(Self {
             args: punctuated.into_iter().collect(),
         })

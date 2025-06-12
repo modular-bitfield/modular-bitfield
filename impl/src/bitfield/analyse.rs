@@ -2,8 +2,9 @@ use super::{
     config::{Config, ReprKind, VariableBitsConfig},
     field_config::{FieldConfig, SkipWhich},
     field_info::{FieldInfo, VariantRole},
+    raise_skip_error,
     variable_bits_errors::VariableBitsError,
-    raise_skip_error, BitfieldStruct,
+    BitfieldStruct,
 };
 use core::convert::TryFrom;
 use quote::quote;
@@ -260,17 +261,21 @@ impl BitfieldStruct {
 
 /// Analysis result for variable-size structs
 pub struct VariableStructAnalysis {
-    pub discriminator_field_index: usize,       // Index of field marked with #[variant_discriminator]
-    pub _data_field_index: usize,               // Index of field marked with #[variant_data]
-    pub _fixed_field_indices: Vec<usize>,       // Indices of all other fields
-    pub sizes: Vec<usize>,                      // Total struct sizes for each configuration
-    pub fixed_bits: usize,                     // Total bits used by non-variant fields
-    pub data_enum_type: syn::Type,             // Type of the variant data field
+    pub discriminator_field_index: usize, // Index of field marked with #[variant_discriminator]
+    pub _data_field_index: usize,         // Index of field marked with #[variant_data]
+    pub _fixed_field_indices: Vec<usize>, // Indices of all other fields
+    pub sizes: Vec<usize>,                // Total struct sizes for each configuration
+    pub fixed_bits: usize,                // Total bits used by non-variant fields
+    pub data_enum_type: syn::Type,        // Type of the variant data field
+    pub discriminator_bits: usize,        // Number of bits in discriminator field
 }
 
 impl BitfieldStruct {
     /// Analyze variable-size struct configuration
-    pub fn analyze_variable_bits(&self, config: &Config) -> syn::Result<Option<VariableStructAnalysis>> {
+    pub fn analyze_variable_bits(
+        &self,
+        config: &Config,
+    ) -> syn::Result<Option<VariableStructAnalysis>> {
         let variable_config = match &config.variable_bits {
             Some(config_value) => &config_value.value,
             None => return Ok(None), // Not a variable-size struct
@@ -292,7 +297,8 @@ impl BitfieldStruct {
                             field_type: "discriminator",
                             first_span: discriminator_field.unwrap().1.field.span(),
                             second_span: field_info.field.span(),
-                        }.to_syn_error());
+                        }
+                        .to_syn_error());
                     }
                     discriminator_field = Some((index, field_info));
                 }
@@ -302,7 +308,8 @@ impl BitfieldStruct {
                             field_type: "data",
                             first_span: data_field.unwrap().1.field.span(),
                             second_span: field_info.field.span(),
-                        }.to_syn_error());
+                        }
+                        .to_syn_error());
                     }
                     data_field = Some((index, field_info));
                 }
@@ -312,22 +319,35 @@ impl BitfieldStruct {
             }
         }
 
-        let (discriminator_field_index, discriminator_field) = discriminator_field.ok_or_else(|| {
-            VariableBitsError::MissingVariantField {
-                field_type: "discriminator",
-                span: self.item_struct.span(),
-            }.to_syn_error()
-        })?;
+        let (discriminator_field_index, discriminator_field) =
+            discriminator_field.ok_or_else(|| {
+                VariableBitsError::MissingVariantField {
+                    field_type: "discriminator",
+                    span: self.item_struct.span(),
+                }
+                .to_syn_error()
+            })?;
 
         let (data_field_index, data_field) = data_field.ok_or_else(|| {
             VariableBitsError::MissingVariantField {
                 field_type: "data",
                 span: self.item_struct.span(),
-            }.to_syn_error()
+            }
+            .to_syn_error()
         })?;
 
+        // Calculate discriminator bits
+        let discriminator_bits = if let Some(bits_config) = &discriminator_field.config.bits {
+            bits_config.value
+        } else {
+            extract_bits_from_type(&discriminator_field.field.ty)?
+        };
+
         // Calculate fixed field bits
-        let fixed_bits = calculate_fixed_field_bits(&fixed_fields, &(discriminator_field_index, discriminator_field))?;
+        let fixed_bits = calculate_fixed_field_bits(
+            &fixed_fields,
+            &(discriminator_field_index, discriminator_field),
+        )?;
 
         // Determine struct sizes
         let sizes = match variable_config {
@@ -338,7 +358,8 @@ impl BitfieldStruct {
                         return Err(format_err!(
                             data_field.field.span(),
                             "total size {} too small for fixed fields requiring {} bits",
-                            total_size, fixed_bits
+                            total_size,
+                            fixed_bits
                         ));
                     }
                 }
@@ -356,7 +377,10 @@ impl BitfieldStruct {
         };
 
         // Validate discriminator field can hold enough values
-        validate_discriminator_capacity(&(discriminator_field_index, discriminator_field), sizes.len())?;
+        validate_discriminator_capacity(
+            &(discriminator_field_index, discriminator_field),
+            sizes.len(),
+        )?;
 
         // Validate data field type compatibility (will be checked at compile-time too)
         let data_enum_type = data_field.field.ty.clone();
@@ -368,6 +392,7 @@ impl BitfieldStruct {
             sizes,
             fixed_bits,
             data_enum_type,
+            discriminator_bits,
         }))
     }
 }
@@ -383,12 +408,8 @@ fn calculate_fixed_field_bits(
     if let Some(bits_config) = &discriminator_field_info.config.bits {
         total_bits += bits_config.value;
     } else {
-        // Need to calculate from type - this is complex, defer to compile-time
-        // For now, require explicit #[bits = N] on discriminator field
-        return Err(format_err!(
-            discriminator_field_info.field.span(),
-            "variant_discriminator field requires explicit #[bits = N] attribute"
-        ));
+        // Try to extract from type (e.g., B4 -> 4 bits)
+        total_bits += extract_bits_from_type(&discriminator_field_info.field.ty)?;
     }
 
     // Add fixed field bits
@@ -396,11 +417,8 @@ fn calculate_fixed_field_bits(
         if let Some(bits_config) = &field_info.config.bits {
             total_bits += bits_config.value;
         } else {
-            // Need to calculate from type - defer to compile-time for now
-            return Err(format_err!(
-                field_info.field.span(),
-                "fixed fields in variable_bits structs require explicit #[bits = N] attribute"
-            ));
+            // Try to extract from type
+            total_bits += extract_bits_from_type(&field_info.field.ty)?;
         }
     }
 
@@ -412,13 +430,11 @@ fn validate_discriminator_capacity(
     num_variants: usize,
 ) -> syn::Result<()> {
     let (_, discriminator_field_info) = discriminator_field;
-    let discriminator_bits = discriminator_field_info.config.bits
-        .as_ref()
-        .map(|config| config.value)
-        .ok_or_else(|| format_err!(
-            discriminator_field_info.field.span(),
-            "discriminator field must have explicit #[bits = N] attribute"
-        ))?;
+    let discriminator_bits = if let Some(bits_config) = &discriminator_field_info.config.bits {
+        bits_config.value
+    } else {
+        extract_bits_from_type(&discriminator_field_info.field.ty)?
+    };
 
     let max_variants = 1 << discriminator_bits;
     if num_variants > max_variants {
@@ -427,8 +443,33 @@ fn validate_discriminator_capacity(
             max_allowed: max_variants - 1,
             discriminator_bits,
             span: discriminator_field_info.field.span(),
-        }.to_syn_error());
+        }
+        .to_syn_error());
     }
 
     Ok(())
+}
+
+/// Extract bit count from types like B4, B8, etc.
+fn extract_bits_from_type(ty: &syn::Type) -> syn::Result<usize> {
+    if let syn::Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            let ident = &segment.ident;
+            let ident_str = ident.to_string();
+
+            // Check if it's a B<N> type
+            if ident_str.starts_with('B') && ident_str.len() > 1 {
+                if let Ok(bits) = ident_str[1..].parse::<usize>() {
+                    if bits > 0 && bits <= 128 {
+                        return Ok(bits);
+                    }
+                }
+            }
+        }
+    }
+
+    Err(format_err!(
+        ty.span(),
+        "could not extract bit count from type - expected B<N> type like B4, B8, etc."
+    ))
 }

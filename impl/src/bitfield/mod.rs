@@ -6,10 +6,10 @@ mod field_info;
 mod params;
 pub mod variable_bits_errors;
 
-use self::{config::Config, params::ParamArgs};
+pub use self::analyse::VariableStructAnalysis;
 pub use self::config::VariableBitsConfig;
 pub use self::variable_bits_errors::VariableBitsError;
-pub use self::analyse::VariableStructAnalysis;
+use self::{config::Config, params::ParamArgs};
 use core::convert::TryFrom;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{self, parse::Result};
@@ -33,7 +33,8 @@ fn analyse_and_expand_or_error(args: TokenStream2, input: TokenStream2) -> Resul
     let mut config = Config::default();
     config.feed_params(params)?;
     let bitfield = BitfieldStruct::try_from((&mut config, input))?;
-    Ok(bitfield.expand(&config))
+    let expanded = bitfield.expand(&config);
+    Ok(expanded)
 }
 
 /// Type used to guide analysis and expansion of `#[bitfield]` structs.

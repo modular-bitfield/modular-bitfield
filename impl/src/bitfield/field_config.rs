@@ -146,10 +146,16 @@ impl FieldConfig {
     /// is already marked as `#[variant_data]`.
     pub fn variant_discriminator(&mut self, span: Span) -> Result<(), syn::Error> {
         if self.variant_discriminator.is_some() {
-            return Err(format_err!(span, "duplicate #[variant_discriminator] attribute"));
+            return Err(format_err!(
+                span,
+                "duplicate #[variant_discriminator] attribute"
+            ));
         }
         if self.variant_data.is_some() {
-            return Err(format_err!(span, "field cannot be both variant_discriminator and variant_data"));
+            return Err(format_err!(
+                span,
+                "field cannot be both variant_discriminator and variant_data"
+            ));
         }
         self.variant_discriminator = Some(ConfigValue::new((), span));
         Ok(())
@@ -166,7 +172,10 @@ impl FieldConfig {
             return Err(format_err!(span, "duplicate #[variant_data] attribute"));
         }
         if self.variant_discriminator.is_some() {
-            return Err(format_err!(span, "field cannot be both variant_discriminator and variant_data"));
+            return Err(format_err!(
+                span,
+                "field cannot be both variant_discriminator and variant_data"
+            ));
         }
         self.variant_data = Some(ConfigValue::new((), span));
         Ok(())

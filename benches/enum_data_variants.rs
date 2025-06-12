@@ -3,8 +3,9 @@
 mod utils;
 
 use modular_bitfield::{
-    bitfield, Specifier,
+    bitfield,
     specifiers::{B4, B6, B8},
+    Specifier,
 };
 use utils::*;
 
@@ -60,12 +61,22 @@ struct HandwrittenEnum {
 }
 
 impl HandwrittenEnum {
-    fn new_empty() -> Self { Self { value: 0 } }
-    fn new_value(v: u8) -> Self { Self { value: v } }
-    fn new_flag() -> Self { Self { value: 0 } }
-    
-    fn into_bytes(self) -> u8 { self.value }
-    fn from_bytes(bytes: u8) -> Self { Self { value: bytes } }
+    fn new_empty() -> Self {
+        Self { value: 0 }
+    }
+    fn new_value(v: u8) -> Self {
+        Self { value: v }
+    }
+    fn new_flag() -> Self {
+        Self { value: 0 }
+    }
+
+    fn into_bytes(self) -> u8 {
+        self.value
+    }
+    fn from_bytes(bytes: u8) -> Self {
+        Self { value: bytes }
+    }
 }
 
 fn bench_enum_into_bytes() {
@@ -77,45 +88,69 @@ fn bench_enum_into_bytes() {
     });
 
     // Data variants: 8-bit
-    one_shot("into_bytes - DataEnum8::Empty", &|| DataEnum8::Empty, |input| {
-        repeat(|| {
-            black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
+    one_shot(
+        "into_bytes - DataEnum8::Empty",
+        &|| DataEnum8::Empty,
+        |input| {
+            repeat(|| {
+                black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
 
-    one_shot("into_bytes - DataEnum8::Value", &|| DataEnum8::Value(42), |input| {
-        repeat(|| {
-            black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
+    one_shot(
+        "into_bytes - DataEnum8::Value",
+        &|| DataEnum8::Value(42),
+        |input| {
+            repeat(|| {
+                black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
 
-    // Data variants: 8-bit complex 
+    // Data variants: 8-bit complex
     let header = Header::new().with_protocol(5).with_flags(10);
-    one_shot("into_bytes - DataEnum16::Header", &|| DataEnum16::Header(header), |input| {
-        repeat(|| {
-            black_box(DataEnum16::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
+    one_shot(
+        "into_bytes - DataEnum16::Header",
+        &|| DataEnum16::Header(header),
+        |input| {
+            repeat(|| {
+                black_box(DataEnum16::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
 
-    one_shot("into_bytes - DataEnum16::Value", &|| DataEnum16::Value(123), |input| {
-        repeat(|| {
-            black_box(DataEnum16::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
+    one_shot(
+        "into_bytes - DataEnum16::Value",
+        &|| DataEnum16::Value(123),
+        |input| {
+            repeat(|| {
+                black_box(DataEnum16::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
 
     // Data variants: 16-bit
-    one_shot("into_bytes - DataEnum32::Value", &|| DataEnum32::Value(1234), |input| {
-        repeat(|| {
-            black_box(DataEnum32::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
+    one_shot(
+        "into_bytes - DataEnum32::Value",
+        &|| DataEnum32::Value(1234),
+        |input| {
+            repeat(|| {
+                black_box(DataEnum32::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
 
     // Handwritten comparison
-    one_shot("into_bytes - Handwritten", &|| HandwrittenEnum::new_value(42), |input| {
-        repeat(|| {
-            black_box(black_box(&input).into_bytes());
-        });
-    });
+    one_shot(
+        "into_bytes - Handwritten",
+        &|| HandwrittenEnum::new_value(42),
+        |input| {
+            repeat(|| {
+                black_box(black_box(&input).into_bytes());
+            });
+        },
+    );
 }
 
 fn bench_enum_from_bytes() {
@@ -165,37 +200,53 @@ fn bench_enum_roundtrip() {
     });
 
     // Data variants: 8-bit
-    one_shot("roundtrip - DataEnum8::Value", &|| DataEnum8::Value(42), |input| {
-        repeat(|| {
-            let bytes = DataEnum8::into_bytes(*black_box(&input)).unwrap();
-            black_box(DataEnum8::from_bytes(bytes).unwrap());
-        });
-    });
+    one_shot(
+        "roundtrip - DataEnum8::Value",
+        &|| DataEnum8::Value(42),
+        |input| {
+            repeat(|| {
+                let bytes = DataEnum8::into_bytes(*black_box(&input)).unwrap();
+                black_box(DataEnum8::from_bytes(bytes).unwrap());
+            });
+        },
+    );
 
     // Data variants: 8-bit complex
     let header = Header::new().with_protocol(5).with_flags(10);
-    one_shot("roundtrip - DataEnum16::Header", &|| DataEnum16::Header(header), |input| {
-        repeat(|| {
-            let bytes = DataEnum16::into_bytes(*black_box(&input)).unwrap();
-            black_box(DataEnum16::from_bytes(bytes).unwrap());
-        });
-    });
+    one_shot(
+        "roundtrip - DataEnum16::Header",
+        &|| DataEnum16::Header(header),
+        |input| {
+            repeat(|| {
+                let bytes = DataEnum16::into_bytes(*black_box(&input)).unwrap();
+                black_box(DataEnum16::from_bytes(bytes).unwrap());
+            });
+        },
+    );
 
     // Data variants: 16-bit
-    one_shot("roundtrip - DataEnum32::Value", &|| DataEnum32::Value(1234), |input| {
-        repeat(|| {
-            let bytes = DataEnum32::into_bytes(*black_box(&input)).unwrap();
-            black_box(DataEnum32::from_bytes(bytes).unwrap());
-        });
-    });
+    one_shot(
+        "roundtrip - DataEnum32::Value",
+        &|| DataEnum32::Value(1234),
+        |input| {
+            repeat(|| {
+                let bytes = DataEnum32::into_bytes(*black_box(&input)).unwrap();
+                black_box(DataEnum32::from_bytes(bytes).unwrap());
+            });
+        },
+    );
 
     // Handwritten comparison
-    one_shot("roundtrip - Handwritten", &|| HandwrittenEnum::new_value(42), |input| {
-        repeat(|| {
-            let bytes = black_box(&input).into_bytes();
-            black_box(HandwrittenEnum::from_bytes(bytes));
-        });
-    });
+    one_shot(
+        "roundtrip - Handwritten",
+        &|| HandwrittenEnum::new_value(42),
+        |input| {
+            repeat(|| {
+                let bytes = black_box(&input).into_bytes();
+                black_box(HandwrittenEnum::from_bytes(bytes));
+            });
+        },
+    );
 }
 
 fn bench_bitfield_usage() {
@@ -214,33 +265,45 @@ fn bench_bitfield_usage() {
         padding: B8,
     }
 
-    one_shot("bitfield - SimplePacket get", &|| {
-        SimplePacket::new().with_simple_enum(SimpleEnum::C)
-    }, |input| {
-        repeat(|| {
-            black_box(black_box(&input).simple_enum());
-        });
-    });
+    one_shot(
+        "bitfield - SimplePacket get",
+        &|| SimplePacket::new().with_simple_enum(SimpleEnum::C),
+        |input| {
+            repeat(|| {
+                black_box(black_box(&input).simple_enum());
+            });
+        },
+    );
 
-    one_shot("bitfield - SimplePacket set", &SimplePacket::new, |mut input| {
-        repeat(|| {
-            black_box(&mut input).set_simple_enum(SimpleEnum::A);
-        });
-    });
+    one_shot(
+        "bitfield - SimplePacket set",
+        &SimplePacket::new,
+        |mut input| {
+            repeat(|| {
+                black_box(&mut input).set_simple_enum(SimpleEnum::A);
+            });
+        },
+    );
 
-    one_shot("bitfield - DataPacket get", &|| {
-        DataPacket::new().with_data_enum(DataEnum8::Value(42))
-    }, |input| {
-        repeat(|| {
-            black_box(black_box(&input).data_enum());
-        });
-    });
+    one_shot(
+        "bitfield - DataPacket get",
+        &|| DataPacket::new().with_data_enum(DataEnum8::Value(42)),
+        |input| {
+            repeat(|| {
+                black_box(black_box(&input).data_enum());
+            });
+        },
+    );
 
-    one_shot("bitfield - DataPacket set", &DataPacket::new, |mut input| {
-        repeat(|| {
-            black_box(&mut input).set_data_enum(DataEnum8::Value(123));
-        });
-    });
+    one_shot(
+        "bitfield - DataPacket set",
+        &DataPacket::new,
+        |mut input| {
+            repeat(|| {
+                black_box(&mut input).set_data_enum(DataEnum8::Value(123));
+            });
+        },
+    );
 }
 
 fn bench_simple_enum() {
@@ -250,13 +313,13 @@ fn bench_simple_enum() {
             black_box(SimpleEnum::into_bytes(*black_box(&input)).unwrap());
         });
     });
-    
+
     one_shot("simple_enum_from_bytes", &|| 1u8, |input| {
         repeat(|| {
             black_box(SimpleEnum::from_bytes(*black_box(&input)).unwrap());
         });
     });
-    
+
     one_shot("simple_enum_roundtrip", &|| SimpleEnum::B, |input| {
         repeat(|| {
             let bytes = SimpleEnum::into_bytes(*black_box(&input)).unwrap();
@@ -267,24 +330,32 @@ fn bench_simple_enum() {
 
 fn bench_data_enum8() {
     println!("\n=== DataEnum8 (8-bit data variants) ===");
-    one_shot("data_enum8_into_bytes_empty", &|| DataEnum8::Empty, |input| {
-        repeat(|| {
-            black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
-    
-    one_shot("data_enum8_into_bytes_value", &|| DataEnum8::Value(42), |input| {
-        repeat(|| {
-            black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
-        });
-    });
-    
+    one_shot(
+        "data_enum8_into_bytes_empty",
+        &|| DataEnum8::Empty,
+        |input| {
+            repeat(|| {
+                black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
+
+    one_shot(
+        "data_enum8_into_bytes_value",
+        &|| DataEnum8::Value(42),
+        |input| {
+            repeat(|| {
+                black_box(DataEnum8::into_bytes(*black_box(&input)).unwrap());
+            });
+        },
+    );
+
     one_shot("data_enum8_from_bytes", &|| 42u8, |input| {
         repeat(|| {
             black_box(DataEnum8::from_bytes(*black_box(&input)).unwrap());
         });
     });
-    
+
     one_shot("data_enum8_roundtrip", &|| DataEnum8::Value(42), |input| {
         repeat(|| {
             let bytes = DataEnum8::into_bytes(*black_box(&input)).unwrap();
@@ -295,24 +366,32 @@ fn bench_data_enum8() {
 
 fn bench_handwritten() {
     println!("\n=== HandwrittenEnum (comparison) ===");
-    one_shot("handwritten_into_bytes", &|| HandwrittenEnum::new_value(42), |input| {
-        repeat(|| {
-            black_box(black_box(&input).into_bytes());
-        });
-    });
-    
+    one_shot(
+        "handwritten_into_bytes",
+        &|| HandwrittenEnum::new_value(42),
+        |input| {
+            repeat(|| {
+                black_box(black_box(&input).into_bytes());
+            });
+        },
+    );
+
     one_shot("handwritten_from_bytes", &|| 42u8, |input| {
         repeat(|| {
             black_box(HandwrittenEnum::from_bytes(*black_box(&input)));
         });
     });
-    
-    one_shot("handwritten_roundtrip", &|| HandwrittenEnum::new_value(42), |input| {
-        repeat(|| {
-            let bytes = black_box(&input).into_bytes();
-            black_box(HandwrittenEnum::from_bytes(bytes));
-        });
-    });
+
+    one_shot(
+        "handwritten_roundtrip",
+        &|| HandwrittenEnum::new_value(42),
+        |input| {
+            repeat(|| {
+                let bytes = black_box(&input).into_bytes();
+                black_box(HandwrittenEnum::from_bytes(bytes));
+            });
+        },
+    );
 }
 
 fn main() {
@@ -320,11 +399,11 @@ fn main() {
     println!("Rust version: {}", env!("CARGO_PKG_VERSION"));
     println!("Comparing enum data variants vs unit enums vs handwritten code");
     println!();
-    
+
     bench_simple_enum();
     bench_data_enum8();
     bench_handwritten();
-    
+
     println!();
     println!("=== BENCHMARKS COMPLETE ===");
 }

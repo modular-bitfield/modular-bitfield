@@ -3,7 +3,7 @@ use super::{field_config::FieldConfig, BitfieldStruct, Config};
 /// Role of a field in variable-size structs
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VariantRole {
-    Discriminator,  // Field that determines which variant is active
+    Discriminator, // Field that determines which variant is active
     Data,          // Field that contains variable-size data
 }
 
