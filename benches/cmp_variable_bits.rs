@@ -1,12 +1,4 @@
-//! Variable bits comprehensive benchmark
-//!
-//! This benchmark provides a complete performance analysis of the variable bits feature:
-//! 1. Core enum performance comparison (generated vs handwritten)
-//! 2. Bitfield integration testing
-//! 3. Different bit sizes and configurations
-//! 4. Correctness validation
-//!
-//! The benchmarks prove zero-cost abstraction and test real-world usage patterns.
+//! Variable bits comprehensive benchmark comparing generated vs handwritten code.
 
 #![allow(dead_code)]
 
@@ -15,9 +7,7 @@ mod utils;
 use modular_bitfield::prelude::*;
 use utils::*;
 
-// =============================================================================
-// SECTION 1: CORE ENUM IMPLEMENTATIONS (Large bit sizes)
-// =============================================================================
+// Core enum implementations (large bit sizes)
 
 // Generated implementation using large bit sizes
 #[derive(Specifier, Debug, Clone, Copy, PartialEq)]
@@ -91,9 +81,7 @@ impl HandwrittenVariableEnum {
     }
 }
 
-// =============================================================================
-// SECTION 2: PRACTICAL ENUM IMPLEMENTATIONS (Small bit sizes)
-// =============================================================================
+// Practical enum implementations (small bit sizes)
 
 // Variable bits enum with smaller sizes for bitfield integration
 #[derive(Specifier, Debug, Clone, Copy, PartialEq)]
@@ -172,9 +160,7 @@ enum SimpleEnum {
     D = 3,
 }
 
-// =============================================================================
-// SECTION 3: BITFIELD INTEGRATION
-// =============================================================================
+// Bitfield integration
 
 // Bitfield struct using variable enum
 #[bitfield]
@@ -239,9 +225,7 @@ impl HandwrittenMessage {
     }
 }
 
-// =============================================================================
-// SECTION 4: CORE ENUM BENCHMARKS (Large sizes)
-// =============================================================================
+// Core enum benchmarks (large sizes)
 
 fn bench_core_enum_construction() {
     println!("\n=== Core Enum Construction (32/64/128 bits) ===");
@@ -367,9 +351,7 @@ fn bench_core_static_methods() {
     });
 }
 
-// =============================================================================
-// SECTION 5: PRACTICAL ENUM BENCHMARKS (Small sizes)
-// =============================================================================
+// Practical enum benchmarks (small sizes)
 
 fn bench_practical_enum_construction() {
     println!("\n=== Practical Enum Construction (8/16/32 bits) ===");
@@ -423,9 +405,7 @@ fn bench_practical_enum_serialization() {
     });
 }
 
-// =============================================================================
-// SECTION 6: BITFIELD INTEGRATION BENCHMARKS
-// =============================================================================
+// Bitfield integration benchmarks
 
 fn bench_bitfield_construction() {
     println!("\n=== Bitfield Construction ===");
@@ -548,9 +528,7 @@ fn bench_bitfield_serialization() {
     );
 }
 
-// =============================================================================
-// SECTION 7: CUSTOM TYPES BENCHMARKS
-// =============================================================================
+// Custom types benchmarks
 
 fn bench_custom_types() {
     println!("\n=== Custom Type Names ===");
@@ -583,9 +561,7 @@ fn bench_custom_types() {
     );
 }
 
-// =============================================================================
-// SECTION 8: BASELINE COMPARISONS
-// =============================================================================
+// Baseline comparisons
 
 fn bench_baseline_comparisons() {
     println!("\n=== Baseline Comparisons ===");
@@ -603,9 +579,7 @@ fn bench_baseline_comparisons() {
     });
 }
 
-// =============================================================================
-// SECTION 9: CORRECTNESS VALIDATION
-// =============================================================================
+// Correctness validation
 
 fn validate_correctness() {
     println!("\n🔍 Correctness Validation");
@@ -675,9 +649,7 @@ fn validate_correctness() {
     println!("✅ All validations passed!");
 }
 
-// =============================================================================
-// SECTION 10: STATIC ANALYSIS
-// =============================================================================
+// Static analysis
 
 fn static_analysis() {
     println!("\n📊 Static Analysis");
@@ -701,9 +673,7 @@ fn static_analysis() {
     println!("VariableData: {:?}", VariableData::supported_sizes());
 }
 
-// =============================================================================
-// MAIN EXECUTION
-// =============================================================================
+// Main execution
 
 fn main() {
     println!("🏁 Variable Bits Comprehensive Benchmark");

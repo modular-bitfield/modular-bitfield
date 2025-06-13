@@ -1053,7 +1053,6 @@ fn generate_enum_with_data_variants(
         for data_type in &data_types {
             assertions.push(quote! {
                 const _: () = {
-                    // Debug: let's see what the actual values are
                     const DATA_TYPE_BITS: usize = <#data_type as ::modular_bitfield::Specifier>::BITS;
                     const TOTAL_BITS: usize = #total_bits;
 
