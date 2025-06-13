@@ -240,10 +240,10 @@ fn test_variable_enum_round_trip_all_variants() {
     }
 
     let test_cases = [
-        (RoundTripTest::A(255), 0u16),
-        (RoundTripTest::B(65535), 1u16),
-        (RoundTripTest::C(16777215), 2u16), // 2^24 - 1, max for 24 bits
-        (RoundTripTest::D(0x12345678), 3u16),
+        (RoundTripTest::A(255), 0usize),
+        (RoundTripTest::B(65535), 1usize),
+        (RoundTripTest::C(16777215), 2usize), // 2^24 - 1, max for 24 bits
+        (RoundTripTest::D(0x12345678), 3usize),
     ];
 
     for (original, expected_discriminant) in test_cases {

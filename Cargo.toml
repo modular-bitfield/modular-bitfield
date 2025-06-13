@@ -1,7 +1,5 @@
 [workspace]
-members = [
-    "impl"
-]
+members = ["impl"]
 default-members = ["", "impl"]
 resolver = "2"
 
@@ -9,7 +7,7 @@ resolver = "2"
 authors = ["Robin Freyler <robinfreyler@web.de>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-publish = false # Use `release.sh`
+publish = false                                                     # Use `release.sh`
 documentation = "https://docs.rs/modular-bitfield"
 repository = "https://github.com/modular-bitfield/modular-bitfield"
 rust-version = "1.70.0"
@@ -56,10 +54,6 @@ harness = false
 
 [[bench]]
 name = "enum_data_variants"
-harness = false
-
-[[bench]]
-name = "variable_bits_performance"
 harness = false
 
 [[bench]]

@@ -6,11 +6,14 @@ mod derive_specifier;
 mod enum_data_variants_comprehensive;
 mod filled_param;
 mod integration_midi_ump;
+mod integration_unified_api;
 mod no_implicit_prelude;
 mod regressions;
 mod repr;
 mod skip;
+mod test_bits_unification;
 mod variable_bits;
+mod variable_struct_test;
 
 use modular_bitfield::prelude::*;
 

@@ -6,7 +6,16 @@ use syn::spanned::Spanned as _;
 
 pub fn generate(input: TokenStream2) -> TokenStream2 {
     match generate_or_error(input) {
-        Ok(output) => output,
+        Ok(output) => {
+            // Wrap the output in an allow attribute to suppress the false positive
+            // clippy warning about semicolon_if_nothing_returned on enum variants
+            quote! {
+                #[allow(clippy::semicolon_if_nothing_returned)]
+                const _: () = {
+                    #output
+                };
+            }
+        },
         Err(err) => err.to_compile_error(),
     }
 }
@@ -97,6 +106,31 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                         }) => {
                             attributes.bits = Some(BitsConfig::Fixed(lit.base10_parse::<usize>()?));
                         }
+                        // #[bits = (8, 16, 32)]
+                        syn::Expr::Tuple(tuple) => {
+                            let mut sizes = Vec::new();
+                            for elem in &tuple.elems {
+                                if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Int(lit), .. }) = elem {
+                                    let size = lit.base10_parse::<usize>()?;
+                                    
+                                    // Validate size constraints
+                                    if size == 0 {
+                                        return Err(format_err_spanned!(lit, "bits sizes must be greater than 0"));
+                                    }
+                                    if size > 128 {
+                                        return Err(format_err_spanned!(lit, "bits sizes cannot exceed 128 bits"));
+                                    }
+                                    
+                                    sizes.push(size);
+                                } else {
+                                    return Err(format_err_spanned!(elem, "expected integer literal in bits tuple"));
+                                }
+                            }
+                            if sizes.is_empty() {
+                                return Err(format_err_spanned!(tuple, "bits tuple cannot be empty"));
+                            }
+                            attributes.bits = Some(BitsConfig::Variable(sizes));
+                        }
                         _ => {
                             return Err(format_err_spanned!(
                                 meta,
@@ -146,7 +180,7 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> syn::Result<Attributes> {
                 syn::Meta::Path(_) => {
                     return Err(format_err_spanned!(
                         attr,
-                        "bits attribute requires a value: #[bits = N] or #[bits(N, M, ...)]"
+                        "bits attribute requires a value: #[bits = N], #[bits = (N, M, ...)], or #[bits(N, M, ...)]"
                     ));
                 }
             }
@@ -251,14 +285,7 @@ fn validate_discriminant_values(variants: &[EnumVariant]) -> syn::Result<()> {
             ));
         }
 
-        // Validate discriminant is reasonable (< 65536)
-        if discriminant > 65535 {
-            return Err(format_err!(
-                variant.span,
-                "discriminant value {} too large (maximum 65535 supported)",
-                discriminant
-            ));
-        }
+        // No need to validate discriminant size since we're using usize
     }
 
     Ok(())
@@ -436,19 +463,17 @@ fn generate_variable_enum_specifier_impl(
                         let data_bytes = <#data_type as ::modular_bitfield::Specifier>::into_bytes(data)?;
 
                         // Validate that the data fits within the variant's bit size
-                        let variant_max_value = if #variant_size == 0 {
-                            0
-                        } else if #variant_size >= 64 {
-                            // For 64+ bits, we can't easily compute the max value,
-                            // so we rely on the underlying type validation
-                            data_bytes as u128
-                        } else {
-                            (1u128 << #variant_size) - 1
-                        };
-
-                        let data_value = data_bytes as u128;
-                        if #variant_size > 0 && #variant_size < 64 && data_value > variant_max_value {
-                            return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds);
+                        // Only validate for sizes less than 64 bits where we can compute max value
+                        if #variant_size > 0 && #variant_size < 64 {
+                            // We need to cast to u128 for comparison, suppress clippy warnings
+                            // since this is generated code and we know the casts are safe
+                            #[allow(clippy::cast_lossless)]
+                            #[allow(clippy::unnecessary_cast)]
+                            let data_value = data_bytes as u128;
+                            let variant_max_value = (1u128 << #variant_size) - 1;
+                            if data_value > variant_max_value {
+                                return ::core::result::Result::Err(::modular_bitfield::error::OutOfBounds);
+                            }
                         }
 
                         ::core::result::Result::Ok(data_bytes as #bytes_type)
@@ -620,16 +645,13 @@ fn generate_enum_discriminant_helpers(
     }).collect();
 
     // Generate the supported discriminants and sizes arrays
-    #[allow(clippy::cast_possible_truncation)]
     let supported_discriminants: Vec<_> = analysis
         .variants
         .iter()
         .enumerate()
         .map(|(index, variant)| {
             let discriminant = variant.discriminant.unwrap_or(index);
-            // Safe cast: discriminant values are validated to be ≤ 65535 in validate_discriminant_values
-            let discriminant_u16 = discriminant as u16;
-            quote! { #discriminant_u16 }
+            quote! { #discriminant }
         })
         .collect();
 
@@ -644,21 +666,18 @@ fn generate_enum_discriminant_helpers(
     Ok(quote! {
         impl #enum_ident {
             /// Get the expected size in bits for a given discriminant value
-            pub const fn size_for_discriminant(discriminant: u16) -> ::core::option::Option<usize> {
-                match discriminant as usize {
+            pub const fn size_for_discriminant(discriminant: usize) -> ::core::option::Option<usize> {
+                match discriminant {
                     #( #size_match_arms, )*
                     _ => ::core::option::Option::None,
                 }
             }
 
             /// Get the discriminant value for this variant
-            #[allow(clippy::cast_possible_truncation)]
-            pub const fn discriminant(&self) -> u16 {
-                // Note: discriminant values are validated to be ≤ 65535 in validate_discriminant_values
-                // but we still need to cast since the match returns usize literals
-                (match self {
+            pub const fn discriminant(&self) -> usize {
+                match self {
                     #( #discriminant_match_arms, )*
-                }) as u16
+                }
             }
 
             /// Get the actual size in bits of this variant's data
@@ -678,17 +697,17 @@ fn generate_enum_discriminant_helpers(
             /// The constructed enum variant, or an error if the discriminant is invalid
             /// or the bytes cannot be parsed for the target variant type.
             pub fn from_discriminant_and_bytes(
-                discriminant: u16,
+                discriminant: usize,
                 bytes: <Self as ::modular_bitfield::Specifier>::Bytes
             ) -> ::core::result::Result<Self, ::modular_bitfield::error::InvalidBitPattern<<Self as ::modular_bitfield::Specifier>::Bytes>> {
-                match discriminant as usize {
+                match discriminant {
                     #( #from_discriminant_arms, )*
                     _ => ::core::result::Result::Err(::modular_bitfield::error::InvalidBitPattern::new(bytes))
                 }
             }
 
             /// Get all supported discriminant values for this enum
-            pub const fn supported_discriminants() -> &'static [u16] {
+            pub const fn supported_discriminants() -> &'static [usize] {
                 &[#( #supported_discriminants ),*]
             }
 

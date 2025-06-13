@@ -986,12 +986,12 @@ impl BitfieldStruct {
         });
 
         // Generate dynamic serialization methods
-        let dynamic_into_bytes_arms = analysis.sizes.iter().enumerate().map(|(index, &size)| {
+        let _dynamic_into_bytes_arms = analysis.sizes.iter().enumerate().map(|(index, &size)| {
             let method_name = format_ident!("into_bytes_{}", size);
             quote! { #index => self.#method_name().to_vec(), }
         });
 
-        let dynamic_from_bytes_methods = analysis.sizes.iter().enumerate().map(|(index, &size)| {
+        let _dynamic_from_bytes_methods = analysis.sizes.iter().enumerate().map(|(index, &size)| {
             let method_name = format_ident!("from_bytes_{}", size);
             let size_bytes = (size + 7) / 8;
 
@@ -1009,6 +1009,9 @@ impl BitfieldStruct {
         });
 
         let dynamic_methods = quote! {
+            // Note: These dynamic methods are currently commented out as they require std/alloc
+            // They can be re-enabled when we add proper feature gating
+            /*
             /// Converts to dynamically-sized byte vector based on current configuration
             pub fn into_bytes_dynamic(&self) -> ::std::vec::Vec<u8> {
                 match self.configuration_index() {
@@ -1027,6 +1030,7 @@ impl BitfieldStruct {
                 #( #dynamic_from_bytes_methods )*
                 ::core::option::Option::None
             }
+            */
         };
 
         Ok(quote! {
