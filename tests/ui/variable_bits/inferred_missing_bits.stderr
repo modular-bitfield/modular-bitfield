@@ -1,4 +1,4 @@
-error: enums with data variants must specify #[bits = N] or #[bits = (sizes...)]
+error: enums with data variants require explicit #[bits = N] attribute
   --> tests/ui/variable_bits/inferred_missing_bits.rs:5:1
    |
 5  | / enum TestData {

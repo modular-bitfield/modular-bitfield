@@ -4,8 +4,8 @@ error: More than one 'bits' attribute is not permitted
 5 | #[bits = 1]
   | ^^^^^^^^^^^
 
-error: bits must be integer literal for fixed size: #[bits = N]
-  --> tests/ui/derive_bitfield_specifier/invalid_bits_attribute.rs:12:3
+error: could not parse 'bits' attribute
+  --> tests/ui/derive_bitfield_specifier/invalid_bits_attribute.rs:12:1
    |
 12 | #[bits = 1.0]
-   |   ^^^^^^^^^^
+   | ^^^^^^^^^^^^^

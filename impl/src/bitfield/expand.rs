@@ -1,7 +1,8 @@
 use super::{
     config::{Config, ReprKind, VariableBitsConfig},
     field_info::FieldInfo,
-    BitfieldStruct, VariableStructAnalysis,
+    variable::{VariableBitsAnalysis, VariableStructAnalysis},
+    BitfieldStruct,
 };
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, quote_spanned};
