@@ -6,7 +6,7 @@ mod field_info;
 mod params;
 pub mod variable;
 
-pub use self::variable::{VariableStructAnalysis, VariableBitsError};
+pub use self::variable::VariableBitsError;
 use self::{config::Config, params::ParamArgs};
 use core::convert::TryFrom;
 use proc_macro2::{Span, TokenStream as TokenStream2};

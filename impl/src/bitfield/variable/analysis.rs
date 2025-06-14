@@ -1,9 +1,13 @@
 use crate::bitfield::{
     config::{Config, VariableBitsConfig},
-    field_info::{FieldInfo, VariantRole},
+    field_info::FieldInfo,
     BitfieldStruct,
 };
-use super::errors::VariableBitsError;
+use super::{
+    errors::VariableBitsError,
+    field_config::VariantRole,
+    field_config_ext::VariableFieldConfigExt,
+};
 use syn::{self, spanned::Spanned as _};
 
 /// Analysis result for variable-size structs
@@ -45,7 +49,8 @@ impl VariableBitsAnalysis for BitfieldStruct {
         let mut fixed_fields = Vec::new();
 
         for (index, field_info) in field_infos.iter().enumerate() {
-            match field_info.variant_role {
+            let variant_role = field_info.config.variant_role(field_info.index, &config.variable_field_configs);
+            match variant_role {
                 Some(VariantRole::Discriminator) => {
                     if let Some((_, existing_field)) = discriminator_field {
                         return Err(VariableBitsError::MultipleVariantFields {

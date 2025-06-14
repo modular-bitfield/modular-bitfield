@@ -10,10 +10,6 @@ pub struct FieldConfig {
     pub bits: Option<ConfigValue<usize>>,
     /// An encountered `#[skip]` attribute on a field.
     pub skip: Option<ConfigValue<SkipWhich>>,
-    /// An encountered `#[variant_discriminator]` attribute on a field.
-    pub variant_discriminator: Option<ConfigValue<()>>,
-    /// An encountered `#[variant_data]` attribute on a field.
-    pub variant_data: Option<ConfigValue<()>>,
 }
 
 /// Controls which parts of the code generation to skip.
@@ -136,58 +132,5 @@ impl FieldConfig {
         self.skip
             .as_ref()
             .is_some_and(|config| SkipWhich::skip_getters(config.value))
-    }
-
-    /// Sets the `#[variant_discriminator]` attribute for a field
-    ///
-    /// # Errors
-    ///
-    /// If previously already registered a `#[variant_discriminator]` or if the field
-    /// is already marked as `#[variant_data]`.
-    pub fn variant_discriminator(&mut self, span: Span) -> Result<(), syn::Error> {
-        if self.variant_discriminator.is_some() {
-            return Err(format_err!(
-                span,
-                "duplicate #[variant_discriminator] attribute"
-            ));
-        }
-        if self.variant_data.is_some() {
-            return Err(format_err!(
-                span,
-                "field cannot be both variant_discriminator and variant_data"
-            ));
-        }
-        self.variant_discriminator = Some(ConfigValue::new((), span));
-        Ok(())
-    }
-
-    /// Sets the `#[variant_data]` attribute for a field
-    ///
-    /// # Errors
-    ///
-    /// If previously already registered a `#[variant_data]` or if the field
-    /// is already marked as `#[variant_discriminator]`.
-    pub fn variant_data(&mut self, span: Span) -> Result<(), syn::Error> {
-        if self.variant_data.is_some() {
-            return Err(format_err!(span, "duplicate #[variant_data] attribute"));
-        }
-        if self.variant_discriminator.is_some() {
-            return Err(format_err!(
-                span,
-                "field cannot be both variant_discriminator and variant_data"
-            ));
-        }
-        self.variant_data = Some(ConfigValue::new((), span));
-        Ok(())
-    }
-
-    /// Returns true if this field is marked as a variant discriminator
-    pub fn is_variant_discriminator(&self) -> bool {
-        self.variant_discriminator.is_some()
-    }
-
-    /// Returns true if this field is marked as variant data
-    pub fn is_variant_data(&self) -> bool {
-        self.variant_data.is_some()
     }
 }

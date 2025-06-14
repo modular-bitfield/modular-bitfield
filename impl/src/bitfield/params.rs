@@ -1,4 +1,7 @@
-use super::config::{Config, VariableBitsConfig};
+use super::{
+    config::Config,
+    variable::VariableParamsExt,
+};
 use proc_macro2::Span;
 use syn::{parse::Result, spanned::Spanned};
 
@@ -91,76 +94,6 @@ impl Config {
         Ok(())
     }
 
-    /// Feeds a `variable_bits` parameter to the `#[bitfield]` configuration.
-    fn feed_variable_bits_param(&mut self, meta: &syn::Meta) -> Result<()> {
-        match meta {
-            syn::Meta::Path(path) if path.is_ident("variable_bits") => {
-                // #[variable_bits] - inferred from variant data enum
-                self.variable_bits(VariableBitsConfig::Inferred, path.span())
-            }
-            syn::Meta::NameValue(name_value) if name_value.path.is_ident("variable_bits") => {
-                // #[variable_bits = (32, 64, 96)] - explicit tuple
-                match &name_value.value {
-                    syn::Expr::Tuple(tuple) => {
-                        let mut sizes = Vec::new();
-                        for element in &tuple.elems {
-                            match element {
-                                syn::Expr::Lit(syn::ExprLit {
-                                    lit: syn::Lit::Int(lit_int),
-                                    ..
-                                }) => {
-                                    let size = lit_int.base10_parse::<usize>().map_err(|err| {
-                                        format_err!(
-                                            lit_int.span(),
-                                            "encountered malformatted integer value in variable_bits tuple: {}",
-                                            err
-                                        )
-                                    })?;
-                                    sizes.push(size);
-                                }
-                                invalid => {
-                                    return Err(format_err!(
-                                        invalid,
-                                        "encountered invalid element in variable_bits tuple, expected integer literal"
-                                    ));
-                                }
-                            }
-                        }
-                        if sizes.is_empty() {
-                            return Err(format_err!(
-                                tuple.span(),
-                                "variable_bits tuple cannot be empty"
-                            ));
-                        }
-
-                        // Validate sizes are in non-decreasing order (optional constraint for performance)
-                        for window in sizes.windows(2) {
-                            if window[1] < window[0] {
-                                return Err(format_err!(
-                                    tuple.span(),
-                                    "variable_bits sizes should be in non-decreasing order for optimal performance"
-                                ));
-                            }
-                        }
-
-                        self.variable_bits(VariableBitsConfig::Explicit(sizes), name_value.span())
-                    }
-                    invalid => {
-                        return Err(format_err!(
-                            invalid,
-                            "encountered invalid value argument for #[bitfield] `variable_bits` parameter, expected tuple like (32, 64, 96)"
-                        ));
-                    }
-                }
-            }
-            _ => {
-                return Err(format_err!(
-                    meta,
-                    "encountered invalid format for variable_bits parameter"
-                ));
-            }
-        }
-    }
 
     /// Feeds the given parameters to the `#[bitfield]` configuration.
     ///
@@ -172,6 +105,12 @@ impl Config {
         P: IntoIterator<Item = syn::Meta> + 'a,
     {
         for meta in params {
+            // Try variable-specific parsing first
+            if self.parse_variable_bits(&meta)? {
+                continue;
+            }
+
+            // Handle standard parameters
             match &meta {
                 syn::Meta::NameValue(name_value) => {
                     if name_value.path.is_ident("bytes") {
@@ -180,8 +119,6 @@ impl Config {
                         self.feed_bits_param(name_value)?;
                     } else if name_value.path.is_ident("filled") {
                         self.feed_filled_param(name_value)?;
-                    } else if name_value.path.is_ident("variable_bits") {
-                        self.feed_variable_bits_param(&meta)?;
                     } else {
                         return Err(format_err!(
                             name_value,
@@ -190,14 +127,10 @@ impl Config {
                     }
                 }
                 syn::Meta::Path(path) => {
-                    if path.is_ident("variable_bits") {
-                        self.feed_variable_bits_param(&meta)?;
-                    } else {
-                        return Err(format_err!(
-                            path,
-                            "encountered unsupported #[bitfield] attribute"
-                        ));
-                    }
+                    return Err(format_err!(
+                        path,
+                        "encountered unsupported #[bitfield] attribute"
+                    ));
                 }
                 syn::Meta::List(_) => {
                     return Err(format_err!(

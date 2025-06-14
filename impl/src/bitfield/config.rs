@@ -1,4 +1,7 @@
-use super::field_config::FieldConfig;
+use super::{
+    field_config::FieldConfig,
+    variable::field_config_ext::VariableFieldConfigs,
+};
 use crate::errors::CombineError;
 use core::any::TypeId;
 use proc_macro2::Span;
@@ -40,6 +43,7 @@ pub struct Config {
     pub retained_attributes: Vec<syn::Attribute>,
     pub field_configs: HashMap<usize, ConfigValue<FieldConfig>>,
     pub variable_bits: Option<ConfigValue<VariableBitsConfig>>,
+    pub variable_field_configs: VariableFieldConfigs,
 }
 
 /// Kinds of `#[repr(uN)]` annotations for a `#[bitfield]` struct.

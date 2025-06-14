@@ -1,9 +1,7 @@
 use super::{
     config::{Config, ReprKind},
     field_config::{FieldConfig, SkipWhich},
-    field_info::FieldInfo,
     raise_skip_error,
-    variable::{VariableBitsAnalysis, VariableBitsError},
     BitfieldStruct,
 };
 use core::convert::TryFrom;
@@ -160,6 +158,9 @@ impl BitfieldStruct {
             let span = field.span();
             let field_config = Self::extract_field_config(field)?;
             config.field_config(index, span, field_config)?;
+            
+            // Extract variable-specific attributes separately
+            Self::extract_variable_field_config(field, index, config)?;
         }
         Ok(())
     }
@@ -228,9 +229,23 @@ impl BitfieldStruct {
                     }
                 }
             } else if attr.path().is_ident("variant_discriminator") {
+                // Skip - handled separately in extract_variable_field_config
+            } else if attr.path().is_ident("variant_data") {
+                // Skip - handled separately in extract_variable_field_config
+            } else {
+                config.retain_attr(attr.clone());
+            }
+        }
+        Ok(config)
+    }
+
+    /// Extracts the variable-specific attributes for a given field.
+    fn extract_variable_field_config(field: &syn::Field, index: usize, config: &mut Config) -> Result<()> {
+        for attr in &field.attrs {
+            if attr.path().is_ident("variant_discriminator") {
                 match &attr.meta {
                     syn::Meta::Path(path) => {
-                        config.variant_discriminator(path.span())?;
+                        config.variable_field_configs.set_variant_discriminator(index, path.span())?;
                     }
                     _ => {
                         return Err(format_err!(
@@ -242,7 +257,7 @@ impl BitfieldStruct {
             } else if attr.path().is_ident("variant_data") {
                 match &attr.meta {
                     syn::Meta::Path(path) => {
-                        config.variant_data(path.span())?;
+                        config.variable_field_configs.set_variant_data(index, path.span())?;
                     }
                     _ => {
                         return Err(format_err!(
@@ -251,11 +266,9 @@ impl BitfieldStruct {
                         ))
                     }
                 }
-            } else {
-                config.retain_attr(attr.clone());
             }
         }
-        Ok(config)
+        Ok(())
     }
 }
 
