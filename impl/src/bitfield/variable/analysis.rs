@@ -11,6 +11,7 @@ use super::{
 use syn::{self, spanned::Spanned as _};
 
 /// Analysis result for variable-size structs
+#[allow(dead_code)]
 pub struct VariableStructAnalysis {
     pub discriminator_field_index: usize, // Index of field marked with #[variant_discriminator]
     pub _data_field_index: usize,         // Index of field marked with #[variant_data]

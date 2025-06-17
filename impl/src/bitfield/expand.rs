@@ -47,10 +47,7 @@ impl BitfieldStruct {
 
         // New: Variable-size extensions
         let variable_size_extensions = if config.variable_bits.is_some() {
-            match self.expand_variable_struct(config) {
-                Ok(tokens) => tokens,
-                Err(err) => return Err(err),
-            }
+            self.expand_variable_struct(config)?
         } else {
             quote! {}
         };

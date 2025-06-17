@@ -90,19 +90,18 @@ impl VariableStructExpander for BitfieldStruct {
         &self,
         config: &Config,
     ) -> syn::Result<Option<TokenStream2>> {
-        let analysis = match self.analyze_variable_bits(config)? {
-            Some(analysis) => analysis,
-            None => return Ok(None), // Not a variable-size struct
+        let Some(analysis) = self.analyze_variable_bits(config)? else {
+            return Ok(None); // Not a variable-size struct
         };
 
         let struct_ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
 
         // Generate size-specific constructors
-        let constructors = self.generate_size_specific_constructors(&analysis)?;
+        let constructors = Self::generate_size_specific_constructors(&analysis);
 
         // Generate size-specific serialization methods
-        let serialization_methods = self.generate_variable_serialization(&analysis)?;
+        let serialization_methods = Self::generate_variable_serialization(&analysis);
 
         // Generate wire format helpers
         let wire_format_helpers = self.generate_wire_format_helpers(&analysis)?;
@@ -111,7 +110,7 @@ impl VariableStructExpander for BitfieldStruct {
         let helper_methods = self.generate_variable_helper_methods(&analysis)?;
 
         // Generate compile-time validations
-        let compile_time_validations = self.generate_variable_validations(&analysis)?;
+        let compile_time_validations = Self::generate_variable_validations(&analysis);
 
         Ok(Some(quote! {
             #compile_time_validations
@@ -129,14 +128,13 @@ impl VariableStructExpander for BitfieldStruct {
 // Helper methods for variable struct expansion
 impl BitfieldStruct {
     fn generate_size_specific_constructors(
-        &self,
         analysis: &VariableStructAnalysis,
-    ) -> syn::Result<TokenStream2> {
+    ) -> TokenStream2 {
         // Calculate the maximum size in bytes for the struct
         let max_size = analysis.sizes.iter().max().unwrap_or(&0);
         let max_bytes = (max_size + 7) / 8;
 
-        let constructors = analysis.sizes.iter().enumerate().map(|(_index, &size)| {
+        let constructors = analysis.sizes.iter().map(|&size| {
             let constructor_name = format_ident!("new_{}bit", size);
 
             quote! {
@@ -151,16 +149,14 @@ impl BitfieldStruct {
             }
         });
 
-        Ok(quote! {
+        quote! {
             #( #constructors )*
-        })
+        }
     }
 
     fn generate_variable_serialization(
-        &self,
         analysis: &VariableStructAnalysis,
-    ) -> syn::Result<TokenStream2> {
-        let _struct_ident = &self.item_struct.ident;
+    ) -> TokenStream2 {
 
         // Generate size-specific into_bytes methods
         let into_bytes_methods = analysis.sizes.iter().enumerate().map(|(index, &size)| {
@@ -260,11 +256,11 @@ impl BitfieldStruct {
             */
         };
 
-        Ok(quote! {
+        quote! {
             #( #into_bytes_methods )*
             #( #from_bytes_methods )*
             #dynamic_methods
-        })
+        }
     }
 
     fn generate_wire_format_helpers(
@@ -286,9 +282,7 @@ impl BitfieldStruct {
 
         let discriminator_getter = discriminator_field
             .ident
-            .as_ref()
-            .map(|name| format_ident!("{}", name))
-            .unwrap_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index));
+            .as_ref().map_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index), |name| format_ident!("{}", name));
 
         // Generate fallback methods for different struct sizes
         let fallback_methods = analysis
@@ -355,14 +349,7 @@ impl BitfieldStruct {
 
         let discriminator_getter = discriminator_field
             .ident
-            .as_ref()
-            .map(|name| format_ident!("{}", name))
-            .unwrap_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index));
-
-        // Generate configuration index mapping
-        let config_index_arms = (0..analysis.sizes.len()).map(|index| {
-            quote! { #index => #index, }
-        });
+            .as_ref().map_or_else(|| format_ident!("get_{}", analysis.discriminator_field_index), |name| format_ident!("{}", name));
 
         // Generate size lookup
         let size_match_arms: Vec<_> = analysis
@@ -393,16 +380,9 @@ impl BitfieldStruct {
             .collect();
 
         // Generate discriminant-based methods for the public API
-        let _struct_ident = &self.item_struct.ident;
         let max_bytes = (analysis.sizes.iter().max().unwrap_or(&0) + 7) / 8;
 
-        // Calculate the bit offset and mask for discriminant extraction
-        // For MIDI UMP, discriminant is in first 4 bits (LSB in little-endian)
-        let discriminant_bits = analysis.discriminator_bits;
-        let _discriminant_mask = (1u8 << discriminant_bits) - 1;
 
-        // Collect iterators into vectors to avoid move issues
-        let _config_index_arms_vec: Vec<_> = config_index_arms.collect();
 
         Ok(quote! {
             /// Get the discriminant value from this message
@@ -479,11 +459,8 @@ impl BitfieldStruct {
     }
 
     fn generate_variable_validations(
-        &self,
         analysis: &VariableStructAnalysis,
-    ) -> syn::Result<TokenStream2> {
-        let _struct_ident = &self.item_struct.ident;
-        let _data_enum_type = &analysis.data_enum_type;
+    ) -> TokenStream2 {
 
         // Generate compile-time validation that data enum supports required sizes
         let fixed_bits = analysis.fixed_bits;
@@ -491,10 +468,7 @@ impl BitfieldStruct {
             analysis
                 .sizes
                 .iter()
-                .enumerate()
-                .map(|(_index, &total_size)| {
-                    let _expected_data_size = total_size - fixed_bits;
-
+                .map(|&total_size| {
                     quote! {
                         const _: () = {
                             // Validate that data enum can support the required size for configuration #index
@@ -508,7 +482,7 @@ impl BitfieldStruct {
                     }
                 });
 
-        Ok(quote! {
+        quote! {
             // Compile-time validations
             #( #data_size_validations )*
 
@@ -523,6 +497,6 @@ impl BitfieldStruct {
                 assert!(discriminator_count == 1, "Must have exactly one variant_discriminator field");
                 assert!(data_count == 1, "Must have exactly one variant_data field");
             };
-        })
+        }
     }
 }

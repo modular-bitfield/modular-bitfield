@@ -1,0 +1,57 @@
+error: variable_bits structs require exactly one #[variant_discriminator] field
+ --> tests/ui/variable_bits/variant_field_attributes.rs:5:1
+  |
+5 | / pub struct MissingDiscriminator {
+6 | |     #[variant_data]
+7 | |     data: B32,
+8 | | }
+  | |_^
+
+error: variable_bits structs require exactly one #[variant_data] field
+  --> tests/ui/variable_bits/variant_field_attributes.rs:12:1
+   |
+12 | / pub struct MissingData {
+13 | |     #[variant_discriminator]
+14 | |     discriminator: B4,
+15 | | }
+   | |_^
+
+error: found multiple #[variant_discriminator] fields, only one allowed
+  --> tests/ui/variable_bits/variant_field_attributes.rs:22:5
+   |
+22 | /     #[variant_discriminator]
+23 | |     disc2: B4,
+   | |_____________^
+
+error: first #[variant_discriminator] field declared here
+  --> tests/ui/variable_bits/variant_field_attributes.rs:20:5
+   |
+20 | /     #[variant_discriminator]
+21 | |     disc1: B4,
+   | |_____________^
+
+error: found multiple #[variant_data] fields, only one allowed
+  --> tests/ui/variable_bits/variant_field_attributes.rs:35:5
+   |
+35 | /     #[variant_data]
+36 | |     data2: B8,
+   | |_____________^
+
+error: first #[variant_data] field declared here
+  --> tests/ui/variable_bits/variant_field_attributes.rs:33:5
+   |
+33 | /     #[variant_data]
+34 | |     data1: B20,
+   | |______________^
+
+error: encountered invalid format for #[variant_discriminator] field attribute, expected #[variant_discriminator]
+  --> tests/ui/variable_bits/variant_field_attributes.rs:42:5
+   |
+42 |     #[variant_discriminator = "value"]
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: encountered invalid format for #[variant_data] field attribute, expected #[variant_data]
+  --> tests/ui/variable_bits/variant_field_attributes.rs:51:5
+   |
+51 |     #[variant_data(param)]
+   |     ^^^^^^^^^^^^^^^^^^^^^^

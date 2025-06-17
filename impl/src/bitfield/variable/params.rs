@@ -3,7 +3,7 @@ use syn::{parse::Result, spanned::Spanned};
 
 /// Extension trait for parsing variable-bits specific parameters
 pub trait VariableParamsExt {
-    /// Parse variable_bits parameter
+    /// Parse `variable_bits` parameter
     fn parse_variable_bits(&mut self, meta: &syn::Meta) -> Result<bool>;
 }
 
@@ -25,7 +25,7 @@ impl VariableParamsExt for Config {
     }
 }
 
-/// Parse the variable_bits tuple value
+/// Parse the `variable_bits` tuple value
 fn parse_variable_bits_tuple(name_value: &syn::MetaNameValue, config: &mut Config) -> Result<()> {
     match &name_value.value {
         syn::Expr::Tuple(tuple) => {

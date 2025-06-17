@@ -34,12 +34,15 @@ pub trait VariableFieldConfigExt {
     fn variant_role(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> Option<VariantRole>;
 
     /// Check if this field is a variant discriminator
+    #[allow(dead_code)]
     fn is_variant_discriminator(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool;
 
     /// Check if this field is variant data
+    #[allow(dead_code)]
     fn is_variant_data(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool;
 
     /// Check if this field is fixed (not part of variable bits)
+    #[allow(dead_code)]
     fn is_fixed_field(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool;
 }
 
@@ -49,11 +52,11 @@ impl VariableFieldConfigExt for FieldConfig {
     }
 
     fn is_variant_discriminator(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool {
-        variable_configs.get(field_index).map_or(false, |c| c.is_variant_discriminator())
+        variable_configs.get(field_index).is_some_and(super::field_config::VariableFieldConfig::is_variant_discriminator)
     }
 
     fn is_variant_data(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool {
-        variable_configs.get(field_index).map_or(false, |c| c.is_variant_data())
+        variable_configs.get(field_index).is_some_and(super::field_config::VariableFieldConfig::is_variant_data)
     }
 
     fn is_fixed_field(&self, field_index: usize, variable_configs: &VariableFieldConfigs) -> bool {

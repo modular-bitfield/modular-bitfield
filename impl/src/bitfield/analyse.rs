@@ -228,9 +228,7 @@ impl BitfieldStruct {
                         ))
                     }
                 }
-            } else if attr.path().is_ident("variant_discriminator") {
-                // Skip - handled separately in extract_variable_field_config
-            } else if attr.path().is_ident("variant_data") {
+            } else if attr.path().is_ident("variant_discriminator") || attr.path().is_ident("variant_data") {
                 // Skip - handled separately in extract_variable_field_config
             } else {
                 config.retain_attr(attr.clone());

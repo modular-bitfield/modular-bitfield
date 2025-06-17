@@ -38,7 +38,7 @@ pub enum VariableBitsError {
 }
 
 impl VariableBitsError {
-    pub fn to_syn_error(self) -> syn::Error {
+    pub fn to_syn_error(&self) -> syn::Error {
         match self {
             Self::TupleSizeMismatch {
                 expected,
@@ -46,7 +46,7 @@ impl VariableBitsError {
                 span,
             } => {
                 format_err!(
-                    span,
+                    *span,
                     "variable_bits tuple must have {} elements (one per variant), found {}",
                     expected,
                     found
@@ -59,14 +59,14 @@ impl VariableBitsError {
                 span,
             } => {
                 format_err!(
-                    span,
+                    *span,
                     "variant {} data type {} must have exactly {} bits for variable_bits compatibility",
                     variant_name, actual_bits, expected_bits
                 )
             }
             Self::MissingVariantField { field_type, span } => {
                 format_err!(
-                    span,
+                    *span,
                     "variable_bits structs require exactly one #[variant_{}] field",
                     field_type
                 )
@@ -76,12 +76,12 @@ impl VariableBitsError {
                 first_span,
                 second_span,
             } => format_err!(
-                second_span,
+                *second_span,
                 "found multiple #[variant_{}] fields, only one allowed",
                 field_type
             )
             .into_combine(format_err!(
-                first_span,
+                *first_span,
                 "first #[variant_{}] field declared here",
                 field_type
             )),
@@ -92,7 +92,7 @@ impl VariableBitsError {
                 span,
             } => {
                 format_err!(
-                    span,
+                    *span,
                     "discriminant value {} exceeds maximum {} for {}-bit discriminator field",
                     discriminant,
                     max_allowed,
@@ -101,7 +101,7 @@ impl VariableBitsError {
             }
             Self::ConflictingAttributes { attr1, attr2, span } => {
                 format_err!(
-                    span,
+                    *span,
                     "cannot use both #[{}] and #[{}] on the same item",
                     attr1,
                     attr2

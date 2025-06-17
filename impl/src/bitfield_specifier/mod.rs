@@ -46,7 +46,7 @@ fn generate_or_error(input: TokenStream2) -> syn::Result<TokenStream2> {
                 match attrs_result {
                     Ok(attrs) => {
                         // Use variable enum logic for enums with data
-                        variable_enum::generate_variable_enum(&item_enum, attrs)
+                        variable_enum::generate_variable_enum(&item_enum, &attrs)
                     }
                     Err(e) => Err(e),
                 }

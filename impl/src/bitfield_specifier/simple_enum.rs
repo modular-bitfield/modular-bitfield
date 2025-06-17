@@ -2,9 +2,6 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote_spanned;
 use syn::spanned::Spanned as _;
 
-/// Original simple enum implementation
-/// This preserves the exact logic from the original bitfield_specifier.rs
-
 pub struct Attributes {
     pub bits: Option<usize>,
 }
