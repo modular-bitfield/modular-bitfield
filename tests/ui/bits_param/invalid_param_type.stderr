@@ -1,4 +1,4 @@
-error: encountered invalid value argument for #[bitfield] `bits` parameter
+error: encountered invalid value argument for #[bitfield] `bits` parameter, expected integer or tuple
  --> tests/ui/bits_param/invalid_param_type.rs:5:19
   |
 5 | #[bitfield(bits = NOT_LITERAL)]

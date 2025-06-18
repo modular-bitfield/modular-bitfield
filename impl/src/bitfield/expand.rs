@@ -1,5 +1,5 @@
 use super::{
-    config::{Config, ReprKind, VariableBitsConfig},
+    config::{Config, ReprKind},
     field_info::FieldInfo,
     variable::{VariableBitsAnalysis, VariableStructExpander},
     BitfieldStruct,
@@ -25,7 +25,7 @@ impl BitfieldStruct {
         let specifier_impl = self.generate_specifier_impl(config);
 
         // Check if this is a variable-size struct
-        let is_variable_size = config.variable_bits.is_some();
+        let is_variable_size = config.is_variable_bits();
 
         // Only generate standard checks and conversions for non-variable structs
         let check_filled = if is_variable_size {
@@ -46,7 +46,7 @@ impl BitfieldStruct {
         let debug_impl = self.generate_debug_impl(config);
 
         // New: Variable-size extensions
-        let variable_size_extensions = if config.variable_bits.is_some() {
+        let variable_size_extensions = if config.is_variable_bits() {
             self.expand_variable_struct(config)?
         } else {
             quote! {}
@@ -252,7 +252,7 @@ impl BitfieldStruct {
             || self.generate_bitfield_size(),
             |bits_config| {
                 let span = bits_config.span;
-                let value = bits_config.value;
+                let value = bits_config.value.max_bits();
                 quote_spanned!(span=>
                     #value
                 )
@@ -328,7 +328,7 @@ impl BitfieldStruct {
     fn generate_check_for_filled(&self, config: &Config) -> TokenStream2 {
         match config.bits.as_ref() {
             Some(bits_config) => {
-                self.generate_filled_check_for_unaligned_bits(config, bits_config.value)
+                self.generate_filled_check_for_unaligned_bits(config, bits_config.value.max_bits())
             }
             None => self.generate_filled_check_for_aligned_bits(config),
         }
@@ -353,21 +353,7 @@ impl BitfieldStruct {
         let ident = &self.item_struct.ident;
         let generics = &self.item_struct.generics;
 
-        let size = if let Some(variable_config) = &config.variable_bits {
-            // Use maximum size for variable structs
-            match &variable_config.value {
-                VariableBitsConfig::Explicit(sizes) => {
-                    let max_size = sizes.iter().max().unwrap_or(&0);
-                    quote! { #max_size }
-                }
-                VariableBitsConfig::Inferred => {
-                    // Will be determined during analysis
-                    self.generate_target_or_actual_bitfield_size(config)
-                }
-            }
-        } else {
-            self.generate_target_or_actual_bitfield_size(config)
-        };
+        let size = self.generate_target_or_actual_bitfield_size(config);
 
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
         quote_spanned!(span=>
@@ -387,10 +373,10 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
 
         // For variable-size structs, use the maximum size directly
-        let is_variable_size = config.variable_bits.is_some();
+        let is_variable_size = config.is_variable_bits();
         if is_variable_size {
-            if let Some(variable_config) = &config.variable_bits {
-                if let VariableBitsConfig::Explicit(sizes) = &variable_config.value {
+            if let Some(bits_config) = &config.bits {
+                if let Some(sizes) = bits_config.value.sizes() {
                     let max_size = sizes.iter().max().unwrap_or(&0);
                     let max_bytes = (max_size + 7) / 8;
                     return quote_spanned!(span=>

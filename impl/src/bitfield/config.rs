@@ -8,25 +8,42 @@ use proc_macro2::Span;
 use std::collections::{hash_map::Entry, HashMap};
 use syn::parse::Result;
 
-/// Variable bits configuration for structs
-#[derive(Clone, Debug)]
-pub enum VariableBitsConfig {
-    Inferred,             // #[variable_bits] - infer from variant data enum
-    Explicit(Vec<usize>), // #[variable_bits = (32, 64, 96)]
+/// Unified bits configuration for both fixed and variable sizes
+#[derive(Clone)]
+pub enum BitsConfig {
+    Fixed(usize),         // #[bitfield(bits = 32)]
+    Variable(Vec<usize>), // #[bitfield(bits = (32, 64, 96))]
 }
 
-impl VariableBitsConfig {
-    #[allow(dead_code)]
-    pub fn sizes(&self) -> Option<&[usize]> {
+impl BitsConfig {
+    /// Get the maximum size in bits
+    pub fn max_bits(&self) -> usize {
         match self {
-            Self::Explicit(sizes) => Some(sizes),
-            Self::Inferred => None, // Will be resolved during analysis
+            Self::Fixed(size) => *size,
+            Self::Variable(sizes) => *sizes.iter().max().unwrap_or(&0),
         }
     }
 
-    #[allow(dead_code)]
-    pub fn is_inferred(&self) -> bool {
-        matches!(self, Self::Inferred)
+    /// Check if this is a variable-size configuration
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Self::Variable(_))
+    }
+
+    /// Get the sizes for variable configuration
+    pub fn sizes(&self) -> Option<&[usize]> {
+        match self {
+            Self::Fixed(_) => None,
+            Self::Variable(sizes) => Some(sizes),
+        }
+    }
+}
+
+impl core::fmt::Debug for BitsConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Fixed(size) => write!(f, "{}", size),
+            Self::Variable(sizes) => write!(f, "{:?}", sizes),
+        }
     }
 }
 
@@ -34,7 +51,7 @@ impl VariableBitsConfig {
 #[derive(Default)]
 pub struct Config {
     pub bytes: Option<ConfigValue<usize>>,
-    pub bits: Option<ConfigValue<usize>>,
+    pub bits: Option<ConfigValue<BitsConfig>>,
     pub filled: Option<ConfigValue<bool>>,
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
@@ -42,7 +59,6 @@ pub struct Config {
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
     pub field_configs: HashMap<usize, ConfigValue<FieldConfig>>,
-    pub variable_bits: Option<ConfigValue<VariableBitsConfig>>,
     pub variable_field_configs: VariableFieldConfigs,
 }
 
@@ -104,15 +120,15 @@ impl Config {
 
     fn ensure_no_bits_and_repr_conflict(&self) -> Result<()> {
         if let (Some(bits), Some(repr)) = (self.bits.as_ref(), self.repr.as_ref()) {
-            if bits.value != repr.value.bits() {
+            let bits_size = bits.value.max_bits();
+            if bits_size != repr.value.bits() {
                 return Err(format_err!(
                     Span::call_site(),
-                    "encountered conflicting `bits = {}` and {:?} parameters",
-                    bits.value,
+                    "encountered conflicting `bits` and {:?} parameters",
                     repr.value,
                 )
                 .into_combine(
-                    format_err!(bits.span, "conflicting `bits = {}` here", bits.value,)
+                    format_err!(bits.span, "conflicting bits configuration here")
                         .into_combine(format_err!(repr.span, "conflicting {:?} here", repr.value)),
                 ));
             }
@@ -125,17 +141,16 @@ impl Config {
             fn next_div_by_8(value: usize) -> usize {
                 ((value.saturating_sub(1) / 8) + 1) * 8
             }
-            if next_div_by_8(bits.value) / 8 != bytes.value {
+            let bits_size = bits.value.max_bits();
+            if next_div_by_8(bits_size) / 8 != bytes.value {
                 return Err(format_err!(
                     Span::call_site(),
-                    "encountered conflicting `bits = {}` and `bytes = {}` parameters",
-                    bits.value,
+                    "encountered conflicting bits and `bytes = {}` parameters",
                     bytes.value,
                 )
                 .into_combine(format_err!(
                     bits.span,
-                    "conflicting `bits = {}` here",
-                    bits.value
+                    "conflicting bits configuration here"
                 ))
                 .into_combine(format_err!(
                     bytes.span,
@@ -214,12 +229,12 @@ impl Config {
         Ok(())
     }
 
-    /// Sets the `bits: int` #[bitfield] parameter to the given value.
+    /// Sets the `bits` #[bitfield] parameter to the given value.
     ///
     /// # Errors
     ///
     /// If the specifier has already been set.
-    pub fn bits(&mut self, value: usize, span: Span) -> Result<()> {
+    pub fn bits(&mut self, value: BitsConfig, span: Span) -> Result<()> {
         match &self.bits {
             Some(previous) => return Err(Self::raise_duplicate_error("bits", span, previous)),
             None => self.bits = Some(ConfigValue::new(value, span)),
@@ -325,30 +340,9 @@ impl Config {
         Ok(())
     }
 
-    /// Sets the `variable_bits` parameter for structs
-    ///
-    /// # Errors
-    ///
-    /// If both `#[bits = N]` and `#[variable_bits]` are specified on the same struct,
-    /// or if `#[variable_bits]` is specified multiple times.
-    pub fn variable_bits(&mut self, value: VariableBitsConfig, span: Span) -> Result<()> {
-        if self.bits.is_some() {
-            return Err(format_err!(
-                span,
-                "cannot use both #[bits = N] and #[variable_bits] on same struct"
-            ));
-        }
-        if let Some(previous) = &self.variable_bits {
-            Err(Self::raise_duplicate_error("variable_bits", span, previous))
-        } else {
-            self.variable_bits = Some(ConfigValue::new(value, span));
-            Ok(())
-        }
-    }
-
     /// Returns true if this struct uses variable bits
     #[allow(dead_code)]
     pub fn is_variable_bits(&self) -> bool {
-        self.variable_bits.is_some()
+        self.bits.as_ref().map_or(false, |b| b.value.is_variable())
     }
 }

@@ -1,4 +1,4 @@
-error: bits must be integer literal for fixed size: #[bits = N]
+error: bits attribute must be an integer literal (e.g., #[bits = 32]) or use #[bits(8, 16, 24)] syntax for variable sizes
  --> tests/ui/variable_bits/invalid_attribute_format.rs:4:3
   |
 4 | #[bits = hello]  // Invalid: should be an integer

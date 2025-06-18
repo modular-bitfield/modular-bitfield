@@ -26,6 +26,7 @@ impl VariableFieldConfigs {
         let config = self.configs.entry(index).or_default();
         config.variant_data(span)
     }
+    
 }
 
 /// Extension trait for field configuration to work with variable bits

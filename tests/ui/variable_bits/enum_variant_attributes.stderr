@@ -1,0 +1,73 @@
+error: variant #[bits = 32] conflicts with tuple position 1 size 16
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:21:5
+   |
+21 | /     #[bits = 32] // Conflicts with tuple position 1 which specifies 16
+22 | |     B(u16),
+   | |__________^
+
+error: enums with data variants require explicit #[bits = N] attribute
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:37:1
+   |
+37 | / pub enum InvalidBitsFormat {
+38 | |     #[bits = "8"]  // Should be numeric literal
+39 | |     A(u8),
+40 | |     #[bits(8)]     // Should be #[bits = N]
+41 | |     B(u16),
+42 | | }
+   | |_^
+
+error: attribute value must be a literal
+ --> tests/ui/variable_bits/enum_variant_attributes.rs:5:10
+  |
+5 | #[bits = (8, 16, 24)]
+  |          ^^^^^^^^^^^
+
+error: attribute value must be a literal
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:17:10
+   |
+17 | #[bits = (8, 16, 24)]
+   |          ^^^^^^^^^^^
+
+error: attribute value must be a literal
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:28:10
+   |
+28 | #[bits = (8, 16)]
+   |          ^^^^^^^
+
+error: attribute value must be a literal
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:46:10
+   |
+46 | #[bits = (8, 16)]
+   |          ^^^^^^^
+
+error[E0308]: mismatched types
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:11:5
+   |
+11 | /     #[bits = 24] // Should match position 2
+12 | |     C(B24),
+   | |          ^
+   | |          |
+   | |__________expected `u32`, found `B24`
+   |            arguments to this function are incorrect
+   |
+note: associated function defined here
+  --> src/lib.rs
+   |
+   |     fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds>;
+   |        ^^^^^^^^^^
+
+error[E0308]: mismatched types
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:4:10
+   |
+4  | #[derive(Specifier)]
+   |          ^^^^^^^^^
+   |          |
+   |          expected `B24`, found `u32`
+   |          arguments to this enum variant are incorrect
+   |
+note: tuple variant defined here
+  --> tests/ui/variable_bits/enum_variant_attributes.rs:12:5
+   |
+12 |     C(B24),
+   |     ^
+   = note: this error originates in the derive macro `Specifier` (in Nightly builds, run with -Z macro-backtrace for more info)

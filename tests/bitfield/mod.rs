@@ -14,6 +14,7 @@ mod skip;
 mod test_bits_unification;
 mod variable_bits;
 mod variable_struct_test;
+mod variable_struct_advanced;
 
 use modular_bitfield::prelude::*;
 

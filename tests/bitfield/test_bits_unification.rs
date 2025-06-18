@@ -47,7 +47,7 @@ fn test_variable_struct_with_enum_data() {
     }
     
     // Variable-size container struct with validation
-    #[bitfield(variable_bits = (32, 64, 128))]  // Total sizes
+    #[bitfield(bits = (32, 64, 128))]  // Total sizes
     #[derive(Debug, Clone, Copy)]
     struct Message {
         #[variant_discriminator]

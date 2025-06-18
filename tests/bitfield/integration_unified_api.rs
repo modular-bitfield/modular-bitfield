@@ -18,7 +18,7 @@ fn test_ideal_midi_ump_api() {
     }
     
     // Variable-size container struct with explicit validation
-    #[bitfield(variable_bits = (32, 64, 128))]  // Total sizes
+    #[bitfield(bits = (32, 64, 128))]  // Total sizes
     #[derive(Debug, Clone, Copy)]
     struct UmpMessage {
         #[variant_discriminator]
@@ -109,7 +109,7 @@ fn test_variable_struct_validation() {
         Long(u64),    // 56 bits
     }
     
-    #[bitfield(variable_bits = (32, 64))]
+    #[bitfield(bits = (32, 64))]
     #[derive(Debug, Clone, Copy)]
     struct VariablePacket {
         header: B8,  // Fixed field

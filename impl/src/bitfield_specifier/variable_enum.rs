@@ -13,6 +13,7 @@ pub enum BitsConfig {
     Variable(Vec<usize>), // #[bits = (8, 16, 32)]
 }
 
+#[derive(Debug)]
 pub struct Attributes {
     pub bits: Option<BitsConfig>,
     pub discriminant_bits: Option<usize>, // For #[discriminant_bits = N]
@@ -23,6 +24,16 @@ enum VariantType {
     Data(Box<syn::Type>), // Has data of specified type
 }
 
+impl std::fmt::Debug for VariantType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unit => write!(f, "Unit"),
+            Self::Data(_) => write!(f, "Data(syn::Type)"),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct EnumVariant {
     name: syn::Ident,
     variant_type: VariantType,
@@ -33,6 +44,7 @@ struct EnumVariant {
 
 // Removed EnumAnalysis as it's not used in the refactored code
 
+#[derive(Debug)]
 struct VariableEnumAnalysis {
     variants: Vec<EnumVariant>,
     variant_sizes: Vec<usize>, // Sizes for each variant (parallel to variants)
@@ -76,7 +88,10 @@ fn parse_bits_attribute(attr: &syn::Attribute, attributes: &mut Attributes) -> s
 }
 
 /// Parse `#[bits = N]` or `#[bits = (N, M, ...)]`
-fn parse_bits_name_value(meta: &syn::MetaNameValue, attributes: &mut Attributes) -> syn::Result<()> {
+fn parse_bits_name_value(
+    meta: &syn::MetaNameValue,
+    attributes: &mut Attributes,
+) -> syn::Result<()> {
     match &meta.value {
         // #[bits = 32]
         syn::Expr::Lit(syn::ExprLit {
@@ -87,6 +102,16 @@ fn parse_bits_name_value(meta: &syn::MetaNameValue, attributes: &mut Attributes)
             attributes.bits = Some(BitsConfig::Fixed(size));
             Ok(())
         }
+        // #[bits = "8"] - provide helpful error for string literals
+        syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Str(_),
+            ..
+        }) => {
+            Err(format_err_spanned!(
+                meta,
+                "bits attribute must be an integer literal, not a string: use #[bits = 8] instead of #[bits = \"8\"]"
+            ))
+        }
         // #[bits = (8, 16, 32)]
         syn::Expr::Tuple(tuple) => {
             let sizes = parse_bit_sizes_from_tuple(tuple)?;
@@ -95,7 +120,7 @@ fn parse_bits_name_value(meta: &syn::MetaNameValue, attributes: &mut Attributes)
         }
         _ => Err(format_err_spanned!(
             meta,
-            "bits must be integer literal for fixed size: #[bits = N]"
+            "bits attribute must be an integer literal (e.g., #[bits = 32]) or use #[bits(8, 16, 24)] syntax for variable sizes"
         )),
     }
 }
@@ -107,7 +132,10 @@ fn parse_bits_list(meta_list: &syn::MetaList, attributes: &mut Attributes) -> sy
 
     impl syn::parse::Parse for IntList {
         fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
-            let parsed = syn::punctuated::Punctuated::<syn::LitInt, syn::Token![,]>::parse_terminated(input)?;
+            let parsed =
+                syn::punctuated::Punctuated::<syn::LitInt, syn::Token![,]>::parse_terminated(
+                    input,
+                )?;
             Ok(IntList(parsed.into_iter().collect()))
         }
     }
@@ -115,7 +143,7 @@ fn parse_bits_list(meta_list: &syn::MetaList, attributes: &mut Attributes) -> sy
     let content = &meta_list.tokens;
     let parsed_content: IntList = syn::parse2(content.clone())?;
     let mut sizes = Vec::new();
-    
+
     for lit in parsed_content.0 {
         let size = parse_and_validate_bit_size(&lit)?;
         sizes.push(size);
@@ -124,7 +152,7 @@ fn parse_bits_list(meta_list: &syn::MetaList, attributes: &mut Attributes) -> sy
     if sizes.is_empty() {
         return Err(format_err_spanned!(meta_list, "bits list cannot be empty"));
     }
-    
+
     attributes.bits = Some(BitsConfig::Variable(sizes));
     Ok(())
 }
@@ -132,7 +160,7 @@ fn parse_bits_list(meta_list: &syn::MetaList, attributes: &mut Attributes) -> sy
 /// Parse bit sizes from a tuple expression
 fn parse_bit_sizes_from_tuple(tuple: &syn::ExprTuple) -> syn::Result<Vec<usize>> {
     let mut sizes = Vec::new();
-    
+
     for elem in &tuple.elems {
         if let syn::Expr::Lit(syn::ExprLit {
             lit: syn::Lit::Int(lit),
@@ -148,21 +176,18 @@ fn parse_bit_sizes_from_tuple(tuple: &syn::ExprTuple) -> syn::Result<Vec<usize>>
             ));
         }
     }
-    
+
     if sizes.is_empty() {
-        return Err(format_err_spanned!(
-            tuple,
-            "bits tuple cannot be empty"
-        ));
+        return Err(format_err_spanned!(tuple, "bits tuple cannot be empty"));
     }
-    
+
     Ok(sizes)
 }
 
 /// Parse and validate a single bit size value
 fn parse_and_validate_bit_size(lit: &syn::LitInt) -> syn::Result<usize> {
     let size = lit.base10_parse::<usize>()?;
-    
+
     if size == 0 {
         return Err(format_err_spanned!(
             lit,
@@ -175,21 +200,24 @@ fn parse_and_validate_bit_size(lit: &syn::LitInt) -> syn::Result<usize> {
             "bits sizes cannot exceed 128 bits"
         ));
     }
-    
+
     Ok(size)
 }
 
 /// Parse the `#[discriminant_bits = N]` attribute
-fn parse_discriminant_bits_attribute(attr: &syn::Attribute, attributes: &mut Attributes) -> syn::Result<()> {
+fn parse_discriminant_bits_attribute(
+    attr: &syn::Attribute,
+    attributes: &mut Attributes,
+) -> syn::Result<()> {
     if attributes.discriminant_bits.is_some() {
         return Err(format_err_spanned!(
             attr,
             "More than one 'discriminant_bits' attribute is not permitted",
         ));
     }
-    
+
     let meta = attr.meta.require_name_value()?;
-    
+
     if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Int(lit),
         ..
@@ -286,12 +314,15 @@ fn validate_discriminant_values(variants: &[EnumVariant]) -> syn::Result<()> {
 }
 
 /// Validate that all discriminants fit within the specified number of bits
-fn validate_discriminants_fit_in_bits(variants: &[EnumVariant], discriminant_bits: usize) -> syn::Result<()> {
+fn validate_discriminants_fit_in_bits(
+    variants: &[EnumVariant],
+    discriminant_bits: usize,
+) -> syn::Result<()> {
     let max_value = (1usize << discriminant_bits) - 1;
-    
+
     for (index, variant) in variants.iter().enumerate() {
         let discriminant = variant.discriminant.unwrap_or(index);
-        
+
         if discriminant > max_value {
             return Err(format_err!(
                 variant.span,
@@ -303,7 +334,7 @@ fn validate_discriminants_fit_in_bits(variants: &[EnumVariant], discriminant_bit
             ));
         }
     }
-    
+
     Ok(())
 }
 
@@ -397,7 +428,7 @@ fn analyze_variable_enum(
     if has_discriminants {
         validate_discriminant_values(&variants)?;
     }
-    
+
     // If using external discriminant bits, validate all discriminants fit
     if let Some(discriminant_bits) = attributes.discriminant_bits {
         validate_discriminants_fit_in_bits(&variants, discriminant_bits)?;
@@ -508,12 +539,14 @@ fn determine_bytes_type(max_size: usize, span: proc_macro2::Span) -> syn::Result
         _ => Err(format_err!(
             span,
             "enum requires more than 128 bits, which is not supported"
-        ))
+        )),
     }
 }
 
 /// Generate compile-time assertions for data type sizes
-fn generate_size_assertions(analysis: &VariableEnumAnalysis) -> impl Iterator<Item = TokenStream2> + '_ {
+fn generate_size_assertions(
+    analysis: &VariableEnumAnalysis,
+) -> impl Iterator<Item = TokenStream2> + '_ {
     analysis.variants.iter().enumerate()
         .filter_map(|(index, variant)| {
             match &variant.variant_type {
@@ -542,23 +575,33 @@ fn generate_size_assertions(analysis: &VariableEnumAnalysis) -> impl Iterator<It
 }
 
 /// Generate `into_bytes` match arms for all variants
-fn generate_into_bytes_arms(analysis: &VariableEnumAnalysis, bytes_type: &TokenStream2) -> Vec<TokenStream2> {
-    analysis.variants.iter().enumerate().map(|(index, variant)| {
-        let variant_name = &variant.name;
-        let variant_span = variant.span;
-        let variant_size = analysis.variant_sizes[index];
+fn generate_into_bytes_arms(
+    analysis: &VariableEnumAnalysis,
+    bytes_type: &TokenStream2,
+) -> Vec<TokenStream2> {
+    analysis
+        .variants
+        .iter()
+        .enumerate()
+        .map(|(index, variant)| {
+            let variant_name = &variant.name;
+            let variant_span = variant.span;
+            let variant_size = analysis.variant_sizes[index];
 
-        match &variant.variant_type {
-            VariantType::Unit => generate_unit_variant_into_bytes(variant_name, variant_span, bytes_type),
-            VariantType::Data(data_type) => generate_data_variant_into_bytes(
-                variant_name, 
-                variant_span, 
-                data_type, 
-                variant_size, 
-                bytes_type
-            ),
-        }
-    }).collect()
+            match &variant.variant_type {
+                VariantType::Unit => {
+                    generate_unit_variant_into_bytes(variant_name, variant_span, bytes_type)
+                }
+                VariantType::Data(data_type) => generate_data_variant_into_bytes(
+                    variant_name,
+                    variant_span,
+                    data_type,
+                    variant_size,
+                    bytes_type,
+                ),
+            }
+        })
+        .collect()
 }
 
 /// Generate `into_bytes` for unit variants
@@ -609,9 +652,11 @@ fn generate_first_variant_construction(
     analysis: &VariableEnumAnalysis,
     span: proc_macro2::Span,
 ) -> syn::Result<TokenStream2> {
-    let first_variant = analysis.variants.first()
+    let first_variant = analysis
+        .variants
+        .first()
         .ok_or_else(|| format_err!(span, "enum must have at least one variant"))?;
-    
+
     let variant_name = &first_variant.name;
     let variant_span = first_variant.span;
 
@@ -655,11 +700,7 @@ fn generate_enum_discriminant_helpers(
     // Check if this enum uses external discriminant bits
     if let Some(discriminant_bits) = analysis.discriminant_bits {
         // Generate methods for external discriminant handling
-        return generate_external_discriminant_helpers(
-            analysis,
-            enum_ident,
-            discriminant_bits,
-        );
+        return generate_external_discriminant_helpers(analysis, enum_ident, discriminant_bits);
     }
 
     // Generate all the match arms we need
@@ -932,7 +973,7 @@ fn extract_fixed_bits(attributes: &Attributes, span: proc_macro2::Span) -> syn::
 /// Analyze variants for fixed-size enum
 fn analyze_fixed_enum_variants(input: &syn::ItemEnum) -> syn::Result<Vec<EnumVariant>> {
     let mut variants = Vec::new();
-    
+
     for variant in &input.variants {
         let (discriminant, _) = parse_variant_attrs(variant)?;
         let variant_type = analyze_variant_type(variant)?;
@@ -945,7 +986,7 @@ fn analyze_fixed_enum_variants(input: &syn::ItemEnum) -> syn::Result<Vec<EnumVar
             span: variant.span(),
         });
     }
-    
+
     Ok(variants)
 }
 
@@ -953,26 +994,25 @@ fn analyze_fixed_enum_variants(input: &syn::ItemEnum) -> syn::Result<Vec<EnumVar
 fn analyze_variant_type(variant: &syn::Variant) -> syn::Result<VariantType> {
     match &variant.fields {
         syn::Fields::Unit => Ok(VariantType::Unit),
-        syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-            Ok(VariantType::Data(Box::new(fields.unnamed.first().unwrap().ty.clone())))
-        }
-        syn::Fields::Named(_) => {
-            Err(format_err_spanned!(
-                variant,
-                "named fields in enum variants are not supported"
-            ))
-        }
-        syn::Fields::Unnamed(_) => {
-            Err(format_err_spanned!(
-                variant,
-                "multiple fields in enum variants are not supported"
-            ))
-        }
+        syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => Ok(VariantType::Data(
+            Box::new(fields.unnamed.first().unwrap().ty.clone()),
+        )),
+        syn::Fields::Named(_) => Err(format_err_spanned!(
+            variant,
+            "named fields in enum variants are not supported"
+        )),
+        syn::Fields::Unnamed(_) => Err(format_err_spanned!(
+            variant,
+            "multiple fields in enum variants are not supported"
+        )),
     }
 }
 
 /// Generate `into_bytes` arms for fixed enum
-fn generate_fixed_enum_into_bytes_arms(variants: &[EnumVariant], bytes_type: &TokenStream2) -> Vec<TokenStream2> {
+fn generate_fixed_enum_into_bytes_arms(
+    variants: &[EnumVariant],
+    bytes_type: &TokenStream2,
+) -> Vec<TokenStream2> {
     variants.iter().map(|variant| {
         let variant_name = &variant.name;
         let variant_span = variant.span;
@@ -998,7 +1038,10 @@ fn generate_fixed_enum_into_bytes_arms(variants: &[EnumVariant], bytes_type: &To
 }
 
 /// Generate default `from_bytes` for fixed enum
-fn generate_fixed_enum_default_from_bytes(variants: &[EnumVariant], span: proc_macro2::Span) -> syn::Result<TokenStream2> {
+fn generate_fixed_enum_default_from_bytes(
+    variants: &[EnumVariant],
+    span: proc_macro2::Span,
+) -> syn::Result<TokenStream2> {
     let first_variant = variants
         .first()
         .ok_or_else(|| format_err!(span, "enum must have at least one variant"))?;
@@ -1070,3 +1113,530 @@ fn generate_fixed_enum_from_discriminant_arms(variants: &[EnumVariant]) -> Vec<T
         .collect()
 }
 
+#[cfg(test)]
+mod tests {
+    use super::super::variable_enum::*;
+    use quote::quote;
+    use syn::parse_quote;
+
+    #[test]
+    fn test_parse_attrs_empty() {
+        let attrs = vec![];
+        let result = parse_attrs(&attrs).unwrap();
+        assert!(result.bits.is_none());
+        assert!(result.discriminant_bits.is_none());
+    }
+
+    #[test]
+    fn test_parse_attrs_with_bits_fixed() {
+        let attrs: Vec<syn::Attribute> = vec![parse_quote! { #[bits = 32] }];
+        let result = parse_attrs(&attrs).unwrap();
+        assert!(matches!(result.bits, Some(BitsConfig::Fixed(32))));
+    }
+
+    #[test]
+    fn test_parse_attrs_with_bits_variable_tuple() {
+        let attrs: Vec<syn::Attribute> = vec![parse_quote! { #[bits = (8, 16, 32)] }];
+        let result = parse_attrs(&attrs).unwrap();
+        match result.bits {
+            Some(BitsConfig::Variable(sizes)) => assert_eq!(sizes, vec![8, 16, 32]),
+            _ => panic!("Expected variable bits config"),
+        }
+    }
+
+    #[test]
+    fn test_parse_attrs_with_bits_variable_list() {
+        let attrs: Vec<syn::Attribute> = vec![parse_quote! { #[bits(8, 16, 32)] }];
+        let result = parse_attrs(&attrs).unwrap();
+        match result.bits {
+            Some(BitsConfig::Variable(sizes)) => assert_eq!(sizes, vec![8, 16, 32]),
+            _ => panic!("Expected variable bits config"),
+        }
+    }
+
+    #[test]
+    fn test_parse_attrs_with_discriminant_bits() {
+        let attrs: Vec<syn::Attribute> = vec![parse_quote! { #[discriminant_bits = 4] }];
+        let result = parse_attrs(&attrs).unwrap();
+        assert_eq!(result.discriminant_bits, Some(4));
+    }
+
+    #[test]
+    fn test_parse_attrs_duplicate_bits() {
+        let attrs: Vec<syn::Attribute> =
+            vec![parse_quote! { #[bits = 32] }, parse_quote! { #[bits = 64] }];
+        let result = parse_attrs(&attrs);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("More than one 'bits' attribute"));
+    }
+
+    #[test]
+    fn test_parse_attrs_duplicate_discriminant_bits() {
+        let attrs: Vec<syn::Attribute> = vec![
+            parse_quote! { #[discriminant_bits = 4] },
+            parse_quote! { #[discriminant_bits = 8] },
+        ];
+        let result = parse_attrs(&attrs);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("More than one 'discriminant_bits' attribute"));
+    }
+
+    #[test]
+    fn test_parse_bits_attribute_path_only() {
+        let attr: syn::Attribute = parse_quote! { #[bits] };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_bits_attribute(&attr, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("bits attribute requires a value"));
+    }
+
+    #[test]
+    fn test_parse_bits_name_value_string_literal() {
+        let meta: syn::MetaNameValue = parse_quote! { bits = "8" };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_bits_name_value(&meta, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must be an integer literal, not a string"));
+    }
+
+    #[test]
+    fn test_parse_bits_name_value_invalid_expr() {
+        let meta: syn::MetaNameValue = parse_quote! { bits = true };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_bits_name_value(&meta, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must be an integer literal"));
+    }
+
+    #[test]
+    fn test_parse_bits_list_empty() {
+        let meta_list: syn::MetaList = parse_quote! { bits() };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_bits_list(&meta_list, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("bits list cannot be empty"));
+    }
+
+    #[test]
+    fn test_parse_bit_sizes_from_empty_tuple() {
+        let tuple: syn::ExprTuple = parse_quote! { () };
+        let result = parse_bit_sizes_from_tuple(&tuple);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("bits tuple cannot be empty"));
+    }
+
+    #[test]
+    fn test_parse_bit_sizes_from_tuple_non_literal() {
+        let tuple: syn::ExprTuple = parse_quote! { (8, "16", 32) };
+        let result = parse_bit_sizes_from_tuple(&tuple);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("expected integer literal"));
+    }
+
+    #[test]
+    fn test_parse_and_validate_bit_size_zero() {
+        let lit: syn::LitInt = parse_quote! { 0 };
+        let result = parse_and_validate_bit_size(&lit);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must be greater than 0"));
+    }
+
+    #[test]
+    fn test_parse_and_validate_bit_size_too_large() {
+        let lit: syn::LitInt = parse_quote! { 129 };
+        let result = parse_and_validate_bit_size(&lit);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot exceed 128 bits"));
+    }
+
+    #[test]
+    fn test_parse_discriminant_bits_attribute_invalid_value() {
+        let attr: syn::Attribute = parse_quote! { #[discriminant_bits = "4"] };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_discriminant_bits_attribute(&attr, &mut attributes);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("must be in form"));
+    }
+
+    #[test]
+    fn test_parse_discriminant_bits_attribute_zero() {
+        let attr: syn::Attribute = parse_quote! { #[discriminant_bits = 0] };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_discriminant_bits_attribute(&attr, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must be between 1 and 64"));
+    }
+
+    #[test]
+    fn test_parse_discriminant_bits_attribute_too_large() {
+        let attr: syn::Attribute = parse_quote! { #[discriminant_bits = 65] };
+        let mut attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+        let result = parse_discriminant_bits_attribute(&attr, &mut attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must be between 1 and 64"));
+    }
+
+    #[test]
+    fn test_validate_discriminants_fit_in_bits_exceeds() {
+        let variants = vec![
+            EnumVariant {
+                name: parse_quote! { Variant1 },
+                variant_type: VariantType::Unit,
+                discriminant: Some(15),
+                explicit_bits: None,
+                span: proc_macro2::Span::call_site(),
+            },
+            EnumVariant {
+                name: parse_quote! { Variant2 },
+                variant_type: VariantType::Unit,
+                discriminant: Some(16), // Exceeds 4 bits (max value 15)
+                explicit_bits: None,
+                span: proc_macro2::Span::call_site(),
+            },
+        ];
+
+        let result = validate_discriminants_fit_in_bits(&variants, 4);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("exceeds maximum value 15 for 4 discriminant bits"));
+    }
+
+    #[test]
+    fn test_validate_discriminant_values_duplicate() {
+        let variants = vec![
+            EnumVariant {
+                name: parse_quote! { Variant1 },
+                variant_type: VariantType::Unit,
+                discriminant: Some(5),
+                explicit_bits: None,
+                span: proc_macro2::Span::call_site(),
+            },
+            EnumVariant {
+                name: parse_quote! { Variant2 },
+                variant_type: VariantType::Unit,
+                discriminant: Some(5), // Duplicate
+                explicit_bits: None,
+                span: proc_macro2::Span::call_site(),
+            },
+        ];
+
+        let result = validate_discriminant_values(&variants);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate discriminant value 5"));
+    }
+
+    #[test]
+    fn test_analyze_variable_enum_fixed_size_error() {
+        let input: syn::ItemEnum = parse_quote! {
+            #[bits = 32]
+            enum TestEnum {
+                A,
+                B,
+            }
+        };
+        let attributes = Attributes {
+            bits: Some(BitsConfig::Fixed(32)),
+            discriminant_bits: None,
+        };
+
+        let result = analyze_variable_enum(&input, &attributes);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("fixed size enum should not use variable enum analysis"));
+    }
+
+    #[test]
+    fn test_generate_variable_enum_fixed_bits() {
+        let input: syn::ItemEnum = parse_quote! {
+            #[bits = 32]
+            enum TestEnum {
+                A(u32),
+                B,
+            }
+        };
+        let attributes = Attributes {
+            bits: Some(BitsConfig::Fixed(32)),
+            discriminant_bits: None,
+        };
+
+        let result = generate_variable_enum(&input, &attributes);
+        assert!(result.is_ok());
+        let generated = result.unwrap().to_string();
+        // Should generate fixed-size enum code
+        assert!(generated.contains("const BITS : usize = 32"));
+    }
+
+    #[test]
+    fn test_determine_bytes_type_edge_cases() {
+        // Test 0 bits (e.g., all-unit enum)
+        let result = determine_bytes_type(0, proc_macro2::Span::call_site());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().to_string(), "u8");
+
+        // Test boundary values
+        assert_eq!(
+            determine_bytes_type(8, proc_macro2::Span::call_site())
+                .unwrap()
+                .to_string(),
+            "u8"
+        );
+        assert_eq!(
+            determine_bytes_type(9, proc_macro2::Span::call_site())
+                .unwrap()
+                .to_string(),
+            "u16"
+        );
+        assert_eq!(
+            determine_bytes_type(16, proc_macro2::Span::call_site())
+                .unwrap()
+                .to_string(),
+            "u16"
+        );
+        assert_eq!(
+            determine_bytes_type(17, proc_macro2::Span::call_site())
+                .unwrap()
+                .to_string(),
+            "u32"
+        );
+        assert_eq!(
+            determine_bytes_type(128, proc_macro2::Span::call_site())
+                .unwrap()
+                .to_string(),
+            "u128"
+        );
+
+        // Test too large
+        let result = determine_bytes_type(129, proc_macro2::Span::call_site());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("more than 128 bits"));
+    }
+
+    #[test]
+    fn test_get_bytes_cast_expression_all_sizes() {
+        assert_eq!(get_bytes_cast_expression(0).to_string(), "bytes as u8");
+        assert_eq!(get_bytes_cast_expression(8).to_string(), "bytes as u8");
+        assert_eq!(get_bytes_cast_expression(9).to_string(), "bytes as u16");
+        assert_eq!(get_bytes_cast_expression(16).to_string(), "bytes as u16");
+        assert_eq!(get_bytes_cast_expression(17).to_string(), "bytes as u32");
+        assert_eq!(get_bytes_cast_expression(32).to_string(), "bytes as u32");
+        assert_eq!(get_bytes_cast_expression(33).to_string(), "bytes as u64");
+        assert_eq!(get_bytes_cast_expression(64).to_string(), "bytes as u64");
+        assert_eq!(get_bytes_cast_expression(65).to_string(), "bytes as u128");
+        assert_eq!(get_bytes_cast_expression(128).to_string(), "bytes as u128");
+        assert_eq!(get_bytes_cast_expression(129).to_string(), "bytes");
+    }
+
+    #[test]
+    fn test_generate_unit_variant_into_bytes() {
+        let variant_name: syn::Ident = parse_quote! { MyVariant };
+        let span = proc_macro2::Span::call_site();
+        let bytes_type = quote! { u32 };
+
+        let result = generate_unit_variant_into_bytes(&variant_name, span, &bytes_type);
+        let generated = result.to_string();
+
+        assert!(generated.contains("Self :: MyVariant"));
+        assert!(generated.contains("0 as u32"));
+    }
+
+    #[test]
+    fn test_parse_variant_attrs_duplicate_discriminant() {
+        let variant: syn::Variant = parse_quote! {
+            #[discriminant = 5]
+            #[discriminant = 10]
+            Variant
+        };
+
+        let result = parse_variant_attrs(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate #[discriminant] attribute"));
+    }
+
+    #[test]
+    fn test_parse_variant_attrs_duplicate_bits() {
+        let variant: syn::Variant = parse_quote! {
+            #[bits = 8]
+            #[bits = 16]
+            Variant
+        };
+
+        let result = parse_variant_attrs(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("duplicate #[bits] attribute"));
+    }
+
+    #[test]
+    fn test_parse_variant_attrs_invalid_discriminant() {
+        let variant: syn::Variant = parse_quote! {
+            #[discriminant = "not_a_number"]
+            Variant
+        };
+
+        let result = parse_variant_attrs(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("discriminant value must be an integer literal"));
+    }
+
+    #[test]
+    fn test_parse_variant_attrs_invalid_bits() {
+        let variant: syn::Variant = parse_quote! {
+            #[bits = true]
+            Variant
+        };
+
+        let result = parse_variant_attrs(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("bits value must be an integer literal"));
+    }
+
+    #[test]
+    fn test_generate_first_variant_construction_empty_enum() {
+        let analysis = VariableEnumAnalysis {
+            variants: vec![],
+            variant_sizes: vec![],
+            max_size: 0,
+            discriminant_bits: None,
+        };
+
+        let result = generate_first_variant_construction(&analysis, proc_macro2::Span::call_site());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("enum must have at least one variant"));
+    }
+
+    #[test]
+    fn test_analyze_variant_type_named_fields() {
+        let variant: syn::Variant = parse_quote! {
+            Variant { field: u32 }
+        };
+
+        let result = analyze_variant_type(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("named fields in enum variants are not supported"));
+    }
+
+    #[test]
+    fn test_analyze_variant_type_multiple_fields() {
+        let variant: syn::Variant = parse_quote! {
+            Variant(u32, u16)
+        };
+
+        let result = analyze_variant_type(&variant);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("multiple fields in enum variants are not supported"));
+    }
+
+    #[test]
+    fn test_extract_fixed_bits_no_bits() {
+        let attributes = Attributes {
+            bits: None,
+            discriminant_bits: None,
+        };
+
+        let result = extract_fixed_bits(&attributes, proc_macro2::Span::call_site());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("enums with data variants require explicit #[bits = N] attribute"));
+    }
+
+    #[test]
+    fn test_generate_fixed_enum_default_from_bytes_empty() {
+        let variants = vec![];
+        let result =
+            generate_fixed_enum_default_from_bytes(&variants, proc_macro2::Span::call_site());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("enum must have at least one variant"));
+    }
+}

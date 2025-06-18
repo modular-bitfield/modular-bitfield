@@ -317,7 +317,7 @@ fn bench_core_enum_deserialization() {
     compare("Generated from_discriminant_and_bytes", &|| test_cases, |test_cases| {
         repeat(|| {
             for (disc, bytes) in test_cases.iter().copied() {
-                black_box(GeneratedVariableEnum::from_discriminant_and_bytes(disc, bytes).unwrap());
+                black_box(GeneratedVariableEnum::from_discriminant_and_bytes(disc as usize, bytes).unwrap());
             }
         });
     });
@@ -337,7 +337,7 @@ fn bench_core_static_methods() {
     compare("Generated size_for_discriminant", &|| (), |_| {
         repeat(|| {
             for disc in 0u16..=3u16 {
-                black_box(GeneratedVariableEnum::size_for_discriminant(disc));
+                black_box(GeneratedVariableEnum::size_for_discriminant(disc as usize));
             }
         });
     });
@@ -597,7 +597,7 @@ fn validate_correctness() {
         let gen_bytes = <GeneratedVariableEnum as Specifier>::into_bytes(gen).unwrap();
         let hw_bytes = hw.into_bytes().unwrap();
         assert_eq!(gen_bytes, hw_bytes, "Serialization mismatch for {:?}", gen);
-        assert_eq!(gen.discriminant(), hw.discriminant(), "Discriminant mismatch for {:?}", gen);
+        assert_eq!(gen.discriminant(), hw.discriminant() as usize, "Discriminant mismatch for {:?}", gen);
         assert_eq!(gen.size(), hw.size(), "Size mismatch for {:?}", gen);
         println!("  {:?} ✓", gen);
     }
@@ -639,7 +639,7 @@ fn validate_correctness() {
     let var_data = VariableData::Medium(1234);
     let hw_data = HandwrittenData::Medium(1234);
     
-    assert_eq!(var_data.discriminant(), hw_data.discriminant(), "Discriminant mismatch");
+    assert_eq!(var_data.discriminant(), hw_data.discriminant() as usize, "Discriminant mismatch");
     assert_eq!(var_data.size(), hw_data.size(), "Size mismatch");
     
     let var_bytes = <VariableData as Specifier>::into_bytes(var_data).unwrap();

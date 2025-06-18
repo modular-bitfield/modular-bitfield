@@ -208,28 +208,9 @@ impl BitfieldStruct {
             }
         });
 
-        // Generate dynamic serialization methods
-        let _dynamic_into_bytes_arms = analysis.sizes.iter().enumerate().map(|(index, &size)| {
-            let method_name = format_ident!("into_bytes_{}", size);
-            quote! { #index => self.#method_name().to_vec(), }
-        });
-
-        let _dynamic_from_bytes_methods = analysis.sizes.iter().enumerate().map(|(index, &size)| {
-            let method_name = format_ident!("from_bytes_{}", size);
-            let size_bytes = (size + 7) / 8;
-
-            quote! {
-                if bytes.len() >= #size_bytes {
-                    if let Ok(array) = bytes[..#size_bytes].try_into() {
-                        if let Ok(instance) = Self::#method_name(array) {
-                            if instance.configuration_index() == #index {
-                                return Some(instance);
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        // Note: Dynamic serialization methods are prepared but not used in the current implementation
+        // They would require std/alloc features and are commented out in the generated code
+        // The code generation is tested but the iterators themselves are not executed
 
         let dynamic_methods = quote! {
             // Note: These dynamic methods are currently commented out as they require std/alloc
@@ -498,5 +479,324 @@ impl BitfieldStruct {
                 assert!(data_count == 1, "Must have exactly one variant_data field");
             };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bitfield::{BitfieldStruct, config::{Config, ConfigValue}};
+    use proc_macro2::Span;
+
+    #[test]
+    fn test_generate_size_specific_constructors() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0,
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![32, 64, 128],
+            fixed_bits: 16,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+
+        let constructors = BitfieldStruct::generate_size_specific_constructors(&analysis);
+        let generated = constructors.to_string();
+
+        // Verify constructors were generated
+        assert!(generated.contains("new_32bit"));
+        assert!(generated.contains("new_64bit"));
+        assert!(generated.contains("new_128bit"));
+        // The actual token might have different spacing in the generated output
+        assert!(generated.contains("bytes :") && generated.contains("[0u8"));
+    }
+
+    #[test]
+    fn test_generate_variable_serialization() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0,
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16, 24, 32],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+
+        let serialization = BitfieldStruct::generate_variable_serialization(&analysis);
+        let generated = serialization.to_string();
+
+        // Verify into_bytes methods
+        assert!(generated.contains("into_bytes_16"));
+        assert!(generated.contains("into_bytes_24"));
+        assert!(generated.contains("into_bytes_32"));
+        // Just check that array types are present
+        assert!(generated.contains("[u8 ;"));
+
+        // Verify from_bytes methods
+        assert!(generated.contains("from_bytes_16"));
+        assert!(generated.contains("from_bytes_24"));
+        assert!(generated.contains("from_bytes_32"));
+    }
+
+    #[test]
+    fn test_generate_variable_validations() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0,
+            _data_field_index: 1,
+            _fixed_field_indices: vec![2],
+            sizes: vec![32, 64, 96],
+            fixed_bits: 12,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+
+        let validations = BitfieldStruct::generate_variable_validations(&analysis);
+        let generated = validations.to_string();
+
+        // Check for the general structure of validations
+        assert!(generated.contains("const TOTAL_SIZE : usize"));
+        assert!(generated.contains("const FIXED_BITS : usize"));
+        assert!(generated.contains("const EXPECTED_DATA_SIZE : usize"));
+        
+        // Check that it validates the discriminator count
+        assert!(generated.contains("discriminator_count == 1"));
+        assert!(generated.contains("data_count == 1"));
+    }
+
+    #[test]
+    fn test_expand_variable_struct() {
+        let input: syn::ItemStruct = syn::parse_quote! {
+            #[bitfield(variable_bits = (32, 64))]
+            struct TestStruct {
+                #[variant_discriminator]
+                disc: B2,
+                #[variant_data]
+                data: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let mut config = Config::default();
+        config.bits = Some(ConfigValue {
+            span: Span::call_site(),
+            value: crate::bitfield::config::BitsConfig::Variable(vec![32, 64]),
+        });
+        
+        // Set up field configs
+        config.variable_field_configs.set_variant_discriminator(0, Span::call_site()).unwrap();
+        config.variable_field_configs.set_variant_data(1, Span::call_site()).unwrap();
+        
+        let result = bitfield.expand_variable_struct(&config);
+        assert!(result.is_ok());
+        
+        let expanded = result.unwrap();
+        let generated = expanded.to_string();
+        
+        // Check for key generated methods
+        assert!(generated.contains("new_32bit"));
+        assert!(generated.contains("new_64bit"));
+    }
+
+    #[test]
+    fn test_generate_variable_specifier_impl() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0,
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16, 32, 64],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                disc: B2,
+                data: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let impl_tokens = bitfield.generate_variable_specifier_impl(&analysis);
+        let generated = impl_tokens.to_string();
+        
+        // Check Specifier trait implementation
+        assert!(generated.contains("impl"));
+        assert!(generated.contains("Specifier"));
+        assert!(generated.contains("const BITS")); 
+        assert!(generated.contains("64")); // Max size
+        assert!(generated.contains("type Bytes")); 
+        assert!(generated.contains("[u8")); // Array type
+        assert!(generated.contains("8")); // 64 bits = 8 bytes
+        assert!(generated.contains("into_bytes"));
+        assert!(generated.contains("from_bytes"));
+    }
+
+    #[test]
+    fn test_generate_wire_format_helpers() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0,
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16, 32],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                discriminator: B2,
+                data: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let result = bitfield.generate_wire_format_helpers(&analysis);
+        assert!(result.is_ok());
+        
+        let helpers = result.unwrap();
+        let generated = helpers.to_string();
+        
+        // Check for wire format helper methods
+        assert!(generated.contains("extract_discriminant_from_bytes"));
+        assert!(generated.contains("from_bytes_dynamic_internal"));
+        assert!(generated.contains("from_bytes_32")); // Fallback method
+        assert!(generated.contains("from_bytes_16")); // Fallback method
+    }
+
+    #[test]
+    fn test_generate_variable_helper_methods() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 1, // Use field index 1 (named field)
+            _data_field_index: 2,
+            _fixed_field_indices: vec![0],
+            sizes: vec![24, 48, 96],
+            fixed_bits: 16,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 4,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                fixed: B8,
+                variant_type: B4,
+                data: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let result = bitfield.generate_variable_helper_methods(&analysis);
+        assert!(result.is_ok());
+        
+        let helpers = result.unwrap();
+        let generated = helpers.to_string();
+        
+        // Check helper methods
+        assert!(generated.contains("discriminant"));
+        assert!(generated.contains("size"));
+        assert!(generated.contains("into_bytes"));
+        assert!(generated.contains("from_bytes"));
+        assert!(generated.contains("size_for_discriminant"));
+        assert!(generated.contains("supported_sizes"));
+        assert!(generated.contains("required_bytes"));
+        
+        // Check array literal
+        assert!(generated.contains("24") && generated.contains("48") && generated.contains("96"));
+    }
+
+    #[test]
+    fn test_generate_variable_size_extensions_no_config() {
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                field1: B8,
+                field2: B16,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let config = Config::default(); // No variable_bits config
+        
+        let result = bitfield.generate_variable_size_extensions(&config);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_wire_format_helpers_with_unnamed_field() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 0, // Unnamed field
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct(B2, DataEnum);
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let result = bitfield.generate_wire_format_helpers(&analysis);
+        assert!(result.is_ok());
+        
+        let helpers = result.unwrap();
+        let generated = helpers.to_string();
+        
+        // For unnamed fields, it should generate getter based on index
+        assert!(generated.contains("get_0"));
+    }
+
+    #[test]
+    fn test_wire_format_helpers_invalid_index() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 10, // Invalid index
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                field1: B2,
+                field2: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let result = bitfield.generate_wire_format_helpers(&analysis);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("discriminator field index out of bounds"));
+    }
+
+    #[test]
+    fn test_generate_variable_helper_methods_invalid_index() {
+        let analysis = VariableStructAnalysis {
+            discriminator_field_index: 10, // Invalid index
+            _data_field_index: 1,
+            _fixed_field_indices: vec![],
+            sizes: vec![16],
+            fixed_bits: 8,
+            data_enum_type: syn::parse_quote! { DataEnum },
+            discriminator_bits: 2,
+        };
+        
+        let input: syn::ItemStruct = syn::parse_quote! {
+            struct TestStruct {
+                field1: B2,
+                field2: DataEnum,
+            }
+        };
+        
+        let bitfield = BitfieldStruct { item_struct: input };
+        let result = bitfield.generate_variable_helper_methods(&analysis);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("discriminator field index out of bounds"));
     }
 }

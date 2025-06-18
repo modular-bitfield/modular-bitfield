@@ -5,9 +5,10 @@ pub mod errors;
 pub mod expand;
 pub mod field_config;
 pub mod field_config_ext;
-pub mod params;
 
 pub use analysis::VariableBitsAnalysis;
 pub use errors::VariableBitsError;
 pub use expand::VariableStructExpander;
-pub use params::VariableParamsExt;
+
+#[cfg(test)]
+mod tests;

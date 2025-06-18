@@ -1,4 +1,4 @@
-error: encountered malformatted integer value for `bits` parameter: invalid digit found in string
+error: invalid integer value for `bits` parameter: invalid digit found in string
  --> tests/ui/bits_param/invalid_param_value_2.rs:3:19
   |
 3 | #[bitfield(bits = -1)]

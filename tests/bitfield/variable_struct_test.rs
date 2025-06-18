@@ -17,7 +17,7 @@ enum UmpData {
 #[test]
 fn test_variable_struct_parsing() {
     // Test that variant_discriminator and variant_data attributes are parsed
-    #[bitfield(variable_bits = (32, 64, 128))]
+    #[bitfield(bits = (32, 64, 128))]
     #[derive(Debug, Clone, Copy)]
     struct UmpMessage {
         #[variant_discriminator]

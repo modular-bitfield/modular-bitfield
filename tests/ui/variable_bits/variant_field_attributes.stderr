@@ -1,48 +1,26 @@
-error: variable_bits structs require exactly one #[variant_discriminator] field
- --> tests/ui/variable_bits/variant_field_attributes.rs:5:1
+error: encountered unsupported #[bitfield] attribute
+ --> tests/ui/variable_bits/variant_field_attributes.rs:4:12
   |
-5 | / pub struct MissingDiscriminator {
-6 | |     #[variant_data]
-7 | |     data: B32,
-8 | | }
-  | |_^
+4 | #[bitfield(variable_bits = (32, 64))]
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: variable_bits structs require exactly one #[variant_data] field
-  --> tests/ui/variable_bits/variant_field_attributes.rs:12:1
+error: encountered unsupported #[bitfield] attribute
+  --> tests/ui/variable_bits/variant_field_attributes.rs:11:12
    |
-12 | / pub struct MissingData {
-13 | |     #[variant_discriminator]
-14 | |     discriminator: B4,
-15 | | }
-   | |_^
+11 | #[bitfield(variable_bits = (32, 64))]
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: found multiple #[variant_discriminator] fields, only one allowed
-  --> tests/ui/variable_bits/variant_field_attributes.rs:22:5
+error: encountered unsupported #[bitfield] attribute
+  --> tests/ui/variable_bits/variant_field_attributes.rs:18:12
    |
-22 | /     #[variant_discriminator]
-23 | |     disc2: B4,
-   | |_____________^
+18 | #[bitfield(variable_bits = (32, 64))]
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: first #[variant_discriminator] field declared here
-  --> tests/ui/variable_bits/variant_field_attributes.rs:20:5
+error: encountered unsupported #[bitfield] attribute
+  --> tests/ui/variable_bits/variant_field_attributes.rs:29:12
    |
-20 | /     #[variant_discriminator]
-21 | |     disc1: B4,
-   | |_____________^
-
-error: found multiple #[variant_data] fields, only one allowed
-  --> tests/ui/variable_bits/variant_field_attributes.rs:35:5
-   |
-35 | /     #[variant_data]
-36 | |     data2: B8,
-   | |_____________^
-
-error: first #[variant_data] field declared here
-  --> tests/ui/variable_bits/variant_field_attributes.rs:33:5
-   |
-33 | /     #[variant_data]
-34 | |     data1: B20,
-   | |______________^
+29 | #[bitfield(variable_bits = (32, 64))]
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: encountered invalid format for #[variant_discriminator] field attribute, expected #[variant_discriminator]
   --> tests/ui/variable_bits/variant_field_attributes.rs:42:5

@@ -66,3 +66,7 @@ fn ui_code_coverage() {
 
     assert!(run_success);
 }
+
+// Note: The deprecated bitfield_specifier function cannot be tested directly
+// because proc macros can only be called from within the proc macro expansion context.
+// Its coverage is indirectly tested through the ui tests that use #[derive(BitfieldSpecifier)].
