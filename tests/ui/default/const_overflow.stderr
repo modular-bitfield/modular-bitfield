@@ -1,8 +1,8 @@
 error: literal out of range for `u8`
- --> tests/ui/default/const_overflow.rs:5:15
+ --> tests/ui/default/const_overflow.rs:5:17
   |
-5 |     #[default(256)]  // Too large for B8 (max 255)
-  |               ^^^
+5 |     #[default = 256]  // Too large for B8 (max 255)
+  |                 ^^^
   |
   = note: the literal `256` does not fit into the type `u8` whose range is `0..=255`
   = note: `#[deny(overflowing_literals)]` on by default

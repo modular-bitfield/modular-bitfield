@@ -6,11 +6,11 @@ By default this generates the following API:
 
 - **Constructors:**
 
-    1. `new()`: When any field has a `#[default(...)]` attribute, this applies the specified 
+    1. `new()`: When any field has a `#[default = ...]` attribute, this applies the specified 
        default values. When no defaults are specified, initializes all bits to 0.
        Note that invalid bit patterns are supported in that getters and setters will
        be protecting accesses. This constructor is always `const fn`.
-    2. `new_zeroed()`: Generated when any field has a `#[default(...)]` attribute.
+    2. `new_zeroed()`: Generated when any field has a `#[default = ...]` attribute.
        Always initializes all bits to 0, ignoring any default values.
        This constructor is always `const fn`.
 
@@ -182,9 +182,9 @@ pub struct Sparse {
 }
 ```
 
-## Field Parameter: `#[default(...)]`
+## Field Parameter: `#[default = ...]`
 
-The `#[default(...)]` attribute allows you to specify a default value for a field.
+The `#[default = ...]` attribute allows you to specify a default value for a field.
 When using this attribute, the `new()` constructor applies the specified default values,
 and an additional `new_zeroed()` constructor is generated for explicit zero initialization.
 
@@ -195,11 +195,11 @@ and an additional `new_zeroed()` constructor is generated for explicit zero init
 #[bitfield]
 pub struct Config {
     enabled: bool,
-    #[default(true)]
+    #[default = true]
     auto_restart: bool,
-    #[default(5)]
+    #[default = 5]
     retry_count: B6,
-    #[default(0xFF)]
+    #[default = 0xFF]
     flags: B8,
 }
 
@@ -218,7 +218,7 @@ assert_eq!(config2.flags(), 0);
 
 ### Limitations
 
-- The `#[default(...)]` attribute cannot be used on fields that skip setter generation
+- The `#[default = ...]` attribute cannot be used on fields that skip setter generation
   (i.e., fields marked with `#[skip]` or `#[skip(setters)]`).
 - Default values must be valid for the field's type and bit width.
 - Default expressions must be const-evaluable (literals, const variables, enum variants, simple const expressions).
@@ -269,7 +269,7 @@ pub struct Base {
 ## Support: `#[derive(Default)]`
 
 If a `#[derive(Default)]` is found by the `#[bitfield]` a `Default` implementation
-is generated that calls `Self::new()`. This means that when fields have `#[default(...)]`
+is generated that calls `Self::new()`. This means that when fields have `#[default = ...]`
 attributes, those default values will be applied. When no defaults are specified,
 all fields are zero-initialized.
 
@@ -281,9 +281,9 @@ all fields are zero-initialized.
 #[derive(Default)]
 pub struct Config {
     enabled: bool,
-    #[default(true)]
+    #[default = true]
     auto_restart: bool,
-    #[default(5)]
+    #[default = 5]
     retry_count: B6,
     flags: B8, // no default, so zero-initialized
 }

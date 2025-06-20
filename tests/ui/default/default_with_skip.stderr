@@ -1,8 +1,8 @@
 error: cannot use #[default(...)] on field that skips setters
  --> tests/ui/default/default_with_skip.rs:5:7
   |
-5 |     #[default(true)]
-  |       ^^^^^^^^^^^^^
+5 |     #[default = true]
+  |       ^^^^^^^^^^^^^^
 
 error: field skips setters here
  --> tests/ui/default/default_with_skip.rs:6:7

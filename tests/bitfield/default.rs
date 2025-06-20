@@ -5,10 +5,10 @@ fn basic_functionality() {
     #[bitfield]
     pub struct WithDefaults {
         pub foo: bool,
-        #[default(false)]
+        #[default = false]
         pub bar: bool,
         pub baz: B6,
-        #[default(42)]
+        #[default = 42]
         pub qux: B8,
     }
 
@@ -32,7 +32,7 @@ fn comprehensive_defaults() {
     #[bitfield]
     pub struct Foo {
         pub foo: bool,
-        #[default(true)]
+        #[default = true]
         pub flag: bool,
         pub bar: bool,
         #[skip]
@@ -60,13 +60,13 @@ fn comprehensive_defaults() {
 fn all_fields_with_defaults() {
     #[bitfield]
     pub struct AllDefaults {
-        #[default(true)]
+        #[default = true]
         a: bool,
-        #[default(false)]
+        #[default = false]
         b: bool,
-        #[default(3)]
+        #[default = 3]
         c: B2,
-        #[default(15)]
+        #[default = 15]
         d: B4,
     }
 
@@ -81,13 +81,13 @@ fn all_fields_with_defaults() {
 fn complex_expressions() {
     #[bitfield]
     pub struct ComplexDefaults {
-        #[default(1 + 2)]
+        #[default = 1 + 2]
         a: B4,
-        #[default(0xFF & 0x0F)]
+        #[default = 0xFF & 0x0F]
         b: B4,
-        #[default(true)]
+        #[default = true]
         c: bool,
-        #[default(7)]
+        #[default = 7]
         #[allow(non_snake_case)]
         __padding: B7,
     }
@@ -111,9 +111,9 @@ fn enum_defaults() {
 
     #[bitfield]
     pub struct EnumDefaults {
-        #[default(Mode::Auto)]
+        #[default = Mode::Auto]
         mode: Mode,
-        #[default(true)]
+        #[default = true]
         enabled: bool,
         #[allow(non_snake_case)]
         __padding: B5,
@@ -129,7 +129,7 @@ fn nested_bitfield_defaults() {
     #[bitfield(bits = 4)]
     #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
     pub struct Nibble {
-        #[default(0xF)]
+        #[default = 0xF]
         value: B4,
     }
 
@@ -138,7 +138,7 @@ fn nested_bitfield_defaults() {
         // TODO: Nibble::new() is not const-evaluable yet
         // #[default(Nibble::new())]
         nibble: Nibble,
-        #[default(0xAB)]
+        #[default = 0xAB]
         data: B12,
     }
 
@@ -151,13 +151,13 @@ fn nested_bitfield_defaults() {
 fn defaults_vs_manual_construction() {
     #[bitfield]
     pub struct TestDefaults {
-        #[default(true)]
+        #[default = true]
         a: bool,
-        #[default(false)]
+        #[default = false]
         b: bool,
-        #[default(3)]
+        #[default = 3]
         c: B2,
-        #[default(15)]
+        #[default = 15]
         d: B4,
     }
 
@@ -176,13 +176,13 @@ fn defaults_vs_manual_construction() {
 fn partial_defaults_byte_representation() {
     #[bitfield]
     pub struct PartialDefaults {
-        #[default(3)]
+        #[default = 3]
         a: B4,
-        #[default(15)]
+        #[default = 15]
         b: B4,
-        #[default(true)]
+        #[default = true]
         c: bool,
-        #[default(7)]
+        #[default = 7]
         #[allow(non_snake_case)]
         __padding: B7,
     }
@@ -202,17 +202,17 @@ fn partial_defaults_byte_representation() {
 fn primitive_specifier_defaults() {
     #[bitfield]
     pub struct PrimitiveSpecifierDefaults {
-        #[default(1)]
+        #[default = 1]
         flag: B1,
-        #[default(0b11)]
+        #[default = 0b11]
         two_bits: B2,
-        #[default(0x1F)]
+        #[default = 0x1F]
         five_bits: B5,
-        #[default(0xFF)]
+        #[default = 0xFF]
         byte: B8,
-        #[default(0x1234)]
+        #[default = 0x1234]
         word: B16,
-        #[default(0xDEADBEEF)]
+        #[default = 0xDEADBEEF]
         dword: B32,
     }
 
@@ -229,15 +229,15 @@ fn primitive_specifier_defaults() {
 fn bool_specifier_defaults() {
     #[bitfield]
     pub struct BoolSpecifierDefaults {
-        #[default(true)]
+        #[default = true]
         a: bool,
-        #[default(false)]
+        #[default = false]
         b: bool,
-        #[default(true)]
+        #[default = true]
         c: bool,
-        #[default(false)]
+        #[default = false]
         d: bool,
-        #[default(0xF)]
+        #[default = 0xF]
         padding: B4,
     }
 
@@ -282,13 +282,13 @@ fn complex_specifier_defaults() {
 
     #[bitfield]
     pub struct ComplexSpecifierDefaults {
-        #[default(DEFAULT_LEVEL)]
+        #[default = DEFAULT_LEVEL]
         level: Level,
-        #[default(DEFAULT_FLAGS)]
+        #[default = DEFAULT_FLAGS]
         flags: B8,
-        #[default(Status::Idle)]
+        #[default = Status::Idle]
         status: Status,
-        #[default(true)]
+        #[default = true]
         active: bool,
     }
 
@@ -304,13 +304,13 @@ fn nested_specifier_construction() {
     #[bitfield(bits = 8)]
     #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
     pub struct Flags {
-        #[default(true)]
+        #[default = true]
         enabled: bool,
-        #[default(false)]
+        #[default = false]
         debug: bool,
-        #[default(true)]
+        #[default = true]
         verbose: bool,
-        #[default(0b11111)]
+        #[default = 0b11111]
         level: B5,
     }
 
@@ -320,15 +320,9 @@ fn nested_specifier_construction() {
         // For now, we'll comment this out and test it manually
         // #[default(Flags::new())]
         flags: Flags,
-        #[default(0x42)]
+        #[default = 0x42]
         data: B8,
     }
-
-    // Test that we can construct nested specifiers manually
-    let flags = Flags::new();
-    let bf_manual = NestedSpecifierDefaults::new_zeroed()
-        .with_flags(flags)
-        .with_data(0x42);
 
     // Test that new() applies defaults (only data has default now)
     let bf_defaults = NestedSpecifierDefaults::new();

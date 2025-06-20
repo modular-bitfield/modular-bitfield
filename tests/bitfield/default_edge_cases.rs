@@ -12,11 +12,11 @@ mod const_evaluation_edge_cases {
     fn max_values_for_types() {
         #[bitfield]
         pub struct MaxValues {
-            #[default(255)] // u8::MAX for B8
+            #[default = 255] // u8::MAX for B8
             max_b8: B8,
-            #[default(127)] // Max for B7
+            #[default = 127] // Max for B7
             max_b7: B7,
-            #[default(1)] // Max for B1
+            #[default = 1] // Max for B1
             max_b1: B1,
         }
 
@@ -30,13 +30,13 @@ mod const_evaluation_edge_cases {
     fn const_expressions() {
         #[bitfield]
         pub struct ConstExpressions {
-            #[default(1 << 3)] // Shift operation
+            #[default = 1 << 3] // Shift operation
             shifted: B4,
-            #[default(0xFF & 0x0F)] // Bitwise AND
+            #[default = 0xFF & 0x0F] // Bitwise AND
             masked: B4,
-            #[default(7 + 1)] // Addition
+            #[default = 7 + 1] // Addition
             added: B4,
-            #[default(15 - 3)] // Subtraction
+            #[default = 15 - 3] // Subtraction
             subtracted: B4,
         }
 
@@ -54,9 +54,9 @@ mod const_evaluation_edge_cases {
 
         #[bitfield]
         pub struct ConstVariables {
-            #[default(DEFAULT_VALUE)]
+            #[default = DEFAULT_VALUE]
             field1: B8,
-            #[default(ANOTHER_VALUE)]
+            #[default = ANOTHER_VALUE]
             field2: B16,
         }
 
@@ -76,9 +76,9 @@ mod bit_manipulation_edge_cases {
         #[bitfield]
         pub struct CrossByte {
             prefix: B3, // Takes first 3 bits of byte 0
-            #[default(0xFF)] // B8 field starting at bit 3, spans byte 0-1
+            #[default = 0xFF] // B8 field starting at bit 3, spans byte 0-1
             cross_field: B8,
-            #[default(0x0F)] // B4 field in middle of byte 1
+            #[default = 0x0F] // B4 field in middle of byte 1
             middle: B4,
             suffix: B1, // Last bit of byte 1
         }
@@ -98,11 +98,11 @@ mod bit_manipulation_edge_cases {
     fn large_multi_byte_fields() {
         #[bitfield]
         pub struct LargeFields {
-            #[default(0x12345678)] // 32-bit default
+            #[default = 0x12345678] // 32-bit default
             large32: B32,
-            #[default(0x9ABC)] // 16-bit default
+            #[default = 0x9ABC] // 16-bit default
             medium16: B16,
-            #[default(0xDEF)] // 12-bit default
+            #[default = 0xDEF] // 12-bit default
             medium12: B12,
             padding: B4,
         }
@@ -119,10 +119,10 @@ mod bit_manipulation_edge_cases {
         #[bitfield]
         pub struct UnalignedFields {
             offset1: B1,
-            #[default(0x7F)] // B7 field offset by 1 bit
+            #[default = 0x7F] // B7 field offset by 1 bit
             field7: B7,
             offset2: B2,
-            #[default(0x3F)] // B6 field offset by 2 bits from byte boundary
+            #[default = 0x3F] // B6 field offset by 2 bits from byte boundary
             field6: B6,
         }
 
@@ -137,17 +137,17 @@ mod bit_manipulation_edge_cases {
     fn boundary_values() {
         #[bitfield]
         pub struct BoundaryValues {
-            #[default(1)] // Minimum non-zero
+            #[default = 1] // Minimum non-zero
             min_b1: B1,
-            #[default(3)] // Maximum for B2
+            #[default = 3] // Maximum for B2
             max_b2: B2,
-            #[default(7)] // Maximum for B3
+            #[default = 7] // Maximum for B3
             max_b3: B3,
-            #[default(15)] // Maximum for B4
+            #[default = 15] // Maximum for B4
             max_b4: B4,
-            #[default(31)] // Maximum for B5
+            #[default = 31] // Maximum for B5
             max_b5: B5,
-            #[default(63)] // Maximum for B6
+            #[default = 63] // Maximum for B6
             max_b6: B6,
             padding: B3, // Add padding to make 24 bits (3 bytes)
         }
@@ -186,9 +186,9 @@ mod enum_edge_cases {
     fn enum_max_discriminants() {
         #[bitfield]
         pub struct EnumMax {
-            #[default(MaxEnum::Last)]
+            #[default = MaxEnum::Last]
             max_enum: MaxEnum,
-            #[default(SmallEnum::B)]
+            #[default = SmallEnum::B]
             small_enum: SmallEnum,
             padding: B5, // Add padding to make 16 bits (2 bytes)
         }
@@ -203,9 +203,9 @@ mod enum_edge_cases {
     fn enum_zero_discriminants() {
         #[bitfield]
         pub struct EnumZero {
-            #[default(MaxEnum::First)]
+            #[default = MaxEnum::First]
             zero_enum: MaxEnum,
-            #[default(SmallEnum::A)]
+            #[default = SmallEnum::A]
             small_zero: SmallEnum,
             padding: B5, // Add padding to make 16 bits (2 bytes)
         }
@@ -226,9 +226,9 @@ mod const_context_tests {
     fn const_construction_in_various_contexts() {
         #[bitfield]
         pub struct ConstTest {
-            #[default(true)]
+            #[default = true]
             flag: bool,
-            #[default(42)]
+            #[default = 42]
             value: B7, // Changed to B7 to make total 8 bits (1 byte)
         }
 
@@ -252,7 +252,7 @@ mod const_context_tests {
     fn array_of_const_bitfields() {
         #[bitfield]
         pub struct ArrayTest {
-            #[default(0xAB)]
+            #[default = 0xAB]
             data: B8,
         }
 
@@ -273,9 +273,9 @@ mod integration_tests {
     fn defaults_with_bytes_parameter() {
         #[bitfield(bytes = 4)]
         pub struct WithBytes {
-            #[default(0xDEAD)]
+            #[default = 0xDEAD]
             field1: B16,
-            #[default(0xBEEF)]
+            #[default = 0xBEEF]
             field2: B16,
         }
 
@@ -291,9 +291,9 @@ mod integration_tests {
     fn defaults_with_unfilled_bitfield() {
         #[bitfield(filled = false)]
         pub struct Unfilled {
-            #[default(0x7)]
+            #[default = 0x7]
             field1: B3,
-            #[default(true)]
+            #[default = true]
             field2: bool,
             // Only 4 bits used, 4 bits unused in the byte
         }
@@ -308,7 +308,7 @@ mod integration_tests {
         #[repr(u32)]
         #[bitfield]
         pub struct WithRepr {
-            #[default(0x12345678)]
+            #[default = 0x12345678]
             field1: B32,
         }
 
@@ -328,9 +328,9 @@ mod integration_tests {
         #[bitfield]
         #[derive(Debug)]
         pub struct WithDebug {
-            #[default(true)]
+            #[default = true]
             flag: bool,
-            #[default(42)]
+            #[default = 42]
             value: B7,
         }
 
@@ -350,13 +350,13 @@ mod complex_scenarios {
     fn all_primitive_types_with_defaults() {
         #[bitfield]
         pub struct AllPrimitives {
-            #[default(true)]
+            #[default = true]
             bool_field: bool,
-            #[default(255)]
+            #[default = 255]
             u8_field: u8,
-            #[default(0x1234)]
+            #[default = 0x1234]
             u16_field: u16,
-            #[default(0x12345678)]
+            #[default = 0x12345678]
             u32_field: u32,
             padding: B7, // Add padding to make 64 bits (8 bytes)
         }
@@ -373,13 +373,13 @@ mod complex_scenarios {
     fn mixed_defaults_and_skipped_fields() {
         #[bitfield]
         pub struct MixedFields {
-            #[default(0xAB)]
+            #[default = 0xAB]
             normal: B8,
             #[skip(getters)]
             write_only: B8,
             #[skip(setters)]
             read_only: B8,
-            #[default(0xCD)]
+            #[default = 0xCD]
             normal2: B8,
         }
 
@@ -394,9 +394,9 @@ mod complex_scenarios {
         #[bitfield]
         #[derive(Specifier)]
         pub struct NestedBitfield {
-            #[default(true)]
+            #[default = true]
             inner_flag: bool,
-            #[default(0x7)]
+            #[default = 0x7]
             inner_value: B3,
             padding: B4,
         }
@@ -407,7 +407,7 @@ mod complex_scenarios {
             // Note: Using NestedBitfield::new() in default won't work yet
             // as it's not const-evaluable, so we leave this without default
             nested: NestedBitfield,
-            #[default(0xFF)]
+            #[default = 0xFF]
             suffix: B8,
         }
 

@@ -2,8 +2,8 @@ use modular_bitfield::prelude::*;
 
 #[bitfield]
 pub struct DuplicateDefault {
-    #[default(true)]
-    #[default(false)]
+    #[default = true]
+    #[default = false]
     pub field: bool,
 }
 

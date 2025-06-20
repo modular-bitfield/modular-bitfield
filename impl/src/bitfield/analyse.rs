@@ -228,14 +228,14 @@ impl BitfieldStruct {
                 }
             } else if attr.path().is_ident("default") {
                 match &attr.meta {
-                    syn::Meta::List(meta_list) => {
-                        let default_value: syn::Expr = meta_list.parse_args()?;
-                        config.set_default(default_value, meta_list.span())?;
+                    syn::Meta::NameValue(name_value) => {
+                        let default_value = name_value.value.clone();
+                        config.set_default(default_value, name_value.span())?;
                     }
                     meta => {
                         return Err(format_err!(
                             meta.span(),
-                            "encountered invalid format for #[default(...)] field attribute, expected #[default(expression)]"
+                            "encountered invalid format for #[default] field attribute, expected #[default = expression]"
                         ))
                     }
                 }

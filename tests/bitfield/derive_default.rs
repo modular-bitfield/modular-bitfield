@@ -31,14 +31,14 @@ fn default_with_field_defaults() {
     #[bitfield]
     #[derive(Default, PartialEq, Debug)]
     pub struct WithFieldDefaults {
-        #[default(true)]
+        #[default = true]
         flag: bool,
-        #[default(42)]
+        #[default = 42]
         value: B8,
         counter: B4, // no default
-        #[default(false)]
+        #[default = false]
         enabled: bool,
-        #[default(3)]
+        #[default = 3]
         padding: B2,
     }
 
@@ -70,9 +70,9 @@ fn default_with_enum_fields() {
     #[bitfield]
     #[derive(Default, PartialEq, Debug)]
     pub struct WithEnumDefaults {
-        #[default(Status::Running)]
+        #[default = Status::Running]
         status: Status,
-        #[default(true)]
+        #[default = true]
         enabled: bool,
         counter: B5, // no default
     }
@@ -94,10 +94,10 @@ fn default_tuple_struct() {
     #[bitfield]
     #[derive(Default, PartialEq, Debug)]
     pub struct TupleBitfield(
-        #[default(true)] bool,
-        #[default(255)] B8,
+        #[default = true] bool,
+        #[default = 255] B8,
         B4, // no default
-        #[default(false)] bool,
+        #[default = false] bool,
         B2, // padding to make it 16 bits total
     );
 
@@ -122,11 +122,11 @@ fn default_with_complex_expressions() {
     #[bitfield]
     #[derive(Default, PartialEq, Debug)]
     pub struct ComplexDefaults {
-        #[default(1 + 2)]
+        #[default = 1 + 2]
         a: B4,
-        #[default(DEFAULT_VALUE)]
+        #[default = DEFAULT_VALUE]
         b: B8,
-        #[default(0xFF & 0x0F)]
+        #[default = 0xFF & 0x0F]
         c: B4,
     }
 
@@ -150,11 +150,11 @@ fn default_preserves_other_derives() {
     #[bitfield]
     #[derive(Default, Debug, Clone, PartialEq, Eq)]
     pub struct MultiDerive {
-        #[default(true)]
+        #[default = true]
         flag: bool,
-        #[default(123)]
+        #[default = 123]
         value: B8,
-        #[default(127)]
+        #[default = 127]
         padding: B7,
     }
 
