@@ -21,10 +21,10 @@ fn basic_functionality() {
 
     // Test that new() applies default values
     let bf_defaults = WithDefaults::new();
-    assert!(!bf_defaults.foo());  // no default specified
-    assert!(!bf_defaults.bar());  // default specified as false
-    assert_eq!(bf_defaults.baz(), 0);      // no default specified
-    assert_eq!(bf_defaults.qux(), 42);     // default specified as 42
+    assert!(!bf_defaults.foo()); // no default specified
+    assert!(!bf_defaults.bar()); // default specified as false
+    assert_eq!(bf_defaults.baz(), 0); // no default specified
+    assert_eq!(bf_defaults.qux(), 42); // default specified as 42
 }
 
 #[test]
@@ -47,10 +47,10 @@ fn comprehensive_defaults() {
 
     // Test that new() applies default values
     let bf_defaults = Foo::new();
-    assert!(!bf_defaults.foo());  // no default specified
-    assert!(bf_defaults.flag());  // default specified as true
-    assert!(!bf_defaults.bar());  // no default specified
-    
+    assert!(!bf_defaults.foo()); // no default specified
+    assert!(bf_defaults.flag()); // default specified as true
+    assert!(!bf_defaults.bar()); // no default specified
+
     // Test that manually setting works the same as defaults
     let bf_manual = Foo::new().with_flag(true);
     assert_eq!(bf_defaults.into_bytes(), bf_manual.into_bytes());
@@ -143,7 +143,7 @@ fn nested_bitfield_defaults() {
     }
 
     let bf = NestedDefaults::new();
-    assert_eq!(bf.nibble().value(), 0);  // No default, so zero-initialized
+    assert_eq!(bf.nibble().value(), 0); // No default, so zero-initialized
     assert_eq!(bf.data(), 0xAB);
 }
 
@@ -168,7 +168,7 @@ fn defaults_vs_manual_construction() {
         .with_b(false)
         .with_c(3)
         .with_d(15);
-    
+
     assert_eq!(defaults.into_bytes(), manual.into_bytes());
 }
 
@@ -190,7 +190,7 @@ fn partial_defaults_byte_representation() {
     // Only some fields have defaults
     let bf = PartialDefaults::new();
     let bytes = bf.into_bytes();
-    
+
     // Verify the exact byte pattern
     // a=3 (0011), b=15 (1111), c=true (1), padding=7 (0000111)
     // Layout: pppppppc bbbbaaaa
@@ -247,7 +247,7 @@ fn bool_specifier_defaults() {
     assert!(bf.c());
     assert!(!bf.d());
     assert_eq!(bf.padding(), 0xF);
-    
+
     // Verify byte representation
     let bytes = bf.into_bytes();
     // Expected layout: ppppddcba (LSB first)
@@ -323,21 +323,21 @@ fn nested_specifier_construction() {
         #[default(0x42)]
         data: B8,
     }
-    
+
     // Test that we can construct nested specifiers manually
     let flags = Flags::new();
     let bf_manual = NestedSpecifierDefaults::new_zeroed()
         .with_flags(flags)
         .with_data(0x42);
-    
+
     // Test that new() applies defaults (only data has default now)
     let bf_defaults = NestedSpecifierDefaults::new();
     assert_eq!(bf_defaults.data(), 0x42);
-    
+
     // Verify the flags field is zero-initialized (no default specified for flags field)
     let flags = bf_defaults.flags();
-    assert!(!flags.enabled());   // zero-initialized
-    assert!(!flags.debug());     // zero-initialized
-    assert!(!flags.verbose());   // zero-initialized
+    assert!(!flags.enabled()); // zero-initialized
+    assert!(!flags.debug()); // zero-initialized
+    assert!(!flags.verbose()); // zero-initialized
     assert_eq!(flags.level(), 0); // zero-initialized
 }

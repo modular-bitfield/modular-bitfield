@@ -12,11 +12,11 @@ mod const_evaluation_edge_cases {
     fn max_values_for_types() {
         #[bitfield]
         pub struct MaxValues {
-            #[default(255)]  // u8::MAX for B8
+            #[default(255)] // u8::MAX for B8
             max_b8: B8,
-            #[default(127)]  // Max for B7
+            #[default(127)] // Max for B7
             max_b7: B7,
-            #[default(1)]    // Max for B1
+            #[default(1)] // Max for B1
             max_b1: B1,
         }
 
@@ -30,20 +30,20 @@ mod const_evaluation_edge_cases {
     fn const_expressions() {
         #[bitfield]
         pub struct ConstExpressions {
-            #[default(1 << 3)]       // Shift operation
+            #[default(1 << 3)] // Shift operation
             shifted: B4,
-            #[default(0xFF & 0x0F)]  // Bitwise AND
+            #[default(0xFF & 0x0F)] // Bitwise AND
             masked: B4,
-            #[default(7 + 1)]        // Addition
+            #[default(7 + 1)] // Addition
             added: B4,
-            #[default(15 - 3)]       // Subtraction
+            #[default(15 - 3)] // Subtraction
             subtracted: B4,
         }
 
         const BF: ConstExpressions = ConstExpressions::new();
-        assert_eq!(BF.shifted(), 8);     // 1 << 3
-        assert_eq!(BF.masked(), 15);     // 0xFF & 0x0F
-        assert_eq!(BF.added(), 8);       // 7 + 1
+        assert_eq!(BF.shifted(), 8); // 1 << 3
+        assert_eq!(BF.masked(), 15); // 0xFF & 0x0F
+        assert_eq!(BF.added(), 8); // 7 + 1
         assert_eq!(BF.subtracted(), 12); // 15 - 3
     }
 
@@ -75,20 +75,20 @@ mod bit_manipulation_edge_cases {
     fn cross_byte_boundaries() {
         #[bitfield]
         pub struct CrossByte {
-            prefix: B3,        // Takes first 3 bits of byte 0
-            #[default(0xFF)]   // B8 field starting at bit 3, spans byte 0-1
+            prefix: B3, // Takes first 3 bits of byte 0
+            #[default(0xFF)] // B8 field starting at bit 3, spans byte 0-1
             cross_field: B8,
-            #[default(0x0F)]   // B4 field in middle of byte 1  
+            #[default(0x0F)] // B4 field in middle of byte 1
             middle: B4,
-            suffix: B1,        // Last bit of byte 1
+            suffix: B1, // Last bit of byte 1
         }
 
         const BF: CrossByte = CrossByte::new();
         assert_eq!(BF.cross_field(), 0xFF);
         assert_eq!(BF.middle(), 0x0F);
-        assert_eq!(BF.prefix(), 0);  // No default, should be 0
-        assert_eq!(BF.suffix(), 0);  // No default, should be 0
-        
+        assert_eq!(BF.prefix(), 0); // No default, should be 0
+        assert_eq!(BF.suffix(), 0); // No default, should be 0
+
         // Verify total is 16 bits (2 bytes)
         let bytes = BF.into_bytes();
         assert_eq!(bytes.len(), 2);
@@ -98,11 +98,11 @@ mod bit_manipulation_edge_cases {
     fn large_multi_byte_fields() {
         #[bitfield]
         pub struct LargeFields {
-            #[default(0x12345678)]     // 32-bit default
+            #[default(0x12345678)] // 32-bit default
             large32: B32,
-            #[default(0x9ABC)]         // 16-bit default  
+            #[default(0x9ABC)] // 16-bit default
             medium16: B16,
-            #[default(0xDEF)]          // 12-bit default
+            #[default(0xDEF)] // 12-bit default
             medium12: B12,
             padding: B4,
         }
@@ -119,10 +119,10 @@ mod bit_manipulation_edge_cases {
         #[bitfield]
         pub struct UnalignedFields {
             offset1: B1,
-            #[default(0x7F)]      // B7 field offset by 1 bit
+            #[default(0x7F)] // B7 field offset by 1 bit
             field7: B7,
             offset2: B2,
-            #[default(0x3F)]      // B6 field offset by 2 bits from byte boundary
+            #[default(0x3F)] // B6 field offset by 2 bits from byte boundary
             field6: B6,
         }
 
@@ -137,19 +137,19 @@ mod bit_manipulation_edge_cases {
     fn boundary_values() {
         #[bitfield]
         pub struct BoundaryValues {
-            #[default(1)]          // Minimum non-zero
+            #[default(1)] // Minimum non-zero
             min_b1: B1,
-            #[default(3)]          // Maximum for B2
+            #[default(3)] // Maximum for B2
             max_b2: B2,
-            #[default(7)]          // Maximum for B3
+            #[default(7)] // Maximum for B3
             max_b3: B3,
-            #[default(15)]         // Maximum for B4
+            #[default(15)] // Maximum for B4
             max_b4: B4,
-            #[default(31)]         // Maximum for B5
+            #[default(31)] // Maximum for B5
             max_b5: B5,
-            #[default(63)]         // Maximum for B6
+            #[default(63)] // Maximum for B6
             max_b6: B6,
-            padding: B3,           // Add padding to make 24 bits (3 bytes)
+            padding: B3, // Add padding to make 24 bits (3 bytes)
         }
 
         const BF: BoundaryValues = BoundaryValues::new();
@@ -172,14 +172,14 @@ mod enum_edge_cases {
     #[bits = 8]
     pub enum MaxEnum {
         First = 0,
-        Last = 255,  // Maximum u8 value
+        Last = 255, // Maximum u8 value
     }
 
     #[derive(Specifier, Debug, Clone, Copy, PartialEq)]
     #[bits = 3]
     pub enum SmallEnum {
         A = 0,
-        B = 7,  // Maximum for 3 bits
+        B = 7, // Maximum for 3 bits
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod enum_edge_cases {
             max_enum: MaxEnum,
             #[default(SmallEnum::B)]
             small_enum: SmallEnum,
-            padding: B5,  // Add padding to make 16 bits (2 bytes)
+            padding: B5, // Add padding to make 16 bits (2 bytes)
         }
 
         const BF: EnumMax = EnumMax::new();
@@ -207,7 +207,7 @@ mod enum_edge_cases {
             zero_enum: MaxEnum,
             #[default(SmallEnum::A)]
             small_zero: SmallEnum,
-            padding: B5,  // Add padding to make 16 bits (2 bytes)
+            padding: B5, // Add padding to make 16 bits (2 bytes)
         }
 
         const BF: EnumZero = EnumZero::new();
@@ -229,7 +229,7 @@ mod const_context_tests {
             #[default(true)]
             flag: bool,
             #[default(42)]
-            value: B7,  // Changed to B7 to make total 8 bits (1 byte)
+            value: B7, // Changed to B7 to make total 8 bits (1 byte)
         }
 
         // Test in const context
@@ -256,11 +256,7 @@ mod const_context_tests {
             data: B8,
         }
 
-        const ARRAY: [ArrayTest; 3] = [
-            ArrayTest::new(),
-            ArrayTest::new_zeroed(),
-            ArrayTest::new(),
-        ];
+        const ARRAY: [ArrayTest; 3] = [ArrayTest::new(), ArrayTest::new_zeroed(), ArrayTest::new()];
 
         assert_eq!(ARRAY[0].data(), 0xAB);
         assert_eq!(ARRAY[1].data(), 0);
@@ -286,7 +282,7 @@ mod integration_tests {
         const BF: WithBytes = WithBytes::new();
         assert_eq!(BF.field1(), 0xDEAD);
         assert_eq!(BF.field2(), 0xBEEF);
-        
+
         let bytes = BF.into_bytes();
         assert_eq!(bytes.len(), 4);
     }
@@ -318,11 +314,11 @@ mod integration_tests {
 
         const BF: WithRepr = WithRepr::new();
         assert_eq!(BF.field1(), 0x12345678);
-        
+
         // Test repr conversion
         let as_u32: u32 = BF.into();
         assert_eq!(as_u32, 0x12345678);
-        
+
         let from_u32 = WithRepr::from(0x87654321);
         assert_eq!(from_u32.field1(), 0x87654321);
     }
@@ -362,7 +358,7 @@ mod complex_scenarios {
             u16_field: u16,
             #[default(0x12345678)]
             u32_field: u32,
-            padding: B7,  // Add padding to make 64 bits (8 bytes)
+            padding: B7, // Add padding to make 64 bits (8 bytes)
         }
 
         const BF: AllPrimitives = AllPrimitives::new();
@@ -390,7 +386,7 @@ mod complex_scenarios {
         const BF: MixedFields = MixedFields::new();
         assert_eq!(BF.normal(), 0xAB);
         assert_eq!(BF.normal2(), 0xCD);
-        assert_eq!(BF.read_only(), 0);  // No default applied to read-only field
+        assert_eq!(BF.read_only(), 0); // No default applied to read-only field
     }
 
     #[test]
@@ -408,7 +404,7 @@ mod complex_scenarios {
         #[bitfield]
         pub struct OuterBitfield {
             prefix: B8,
-            // Note: Using NestedBitfield::new() in default won't work yet 
+            // Note: Using NestedBitfield::new() in default won't work yet
             // as it's not const-evaluable, so we leave this without default
             nested: NestedBitfield,
             #[default(0xFF)]
@@ -418,7 +414,7 @@ mod complex_scenarios {
         const OUTER: OuterBitfield = OuterBitfield::new();
         assert_eq!(OUTER.prefix(), 0);
         assert_eq!(OUTER.suffix(), 0xFF);
-        
+
         // The nested field should be zero-initialized since no default is applied
         let nested = OUTER.nested();
         assert!(!nested.inner_flag());

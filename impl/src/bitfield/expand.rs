@@ -358,16 +358,13 @@ impl BitfieldStruct {
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
 
-        // Check if any fields have default values
         let has_defaults = self
             .field_infos(config)
             .any(|info| info.config.default.is_some());
 
         if has_defaults {
-            // Generate const new() with defaults using bit manipulation
             let byte_count = quote_spanned!(span=> #next_divisible_by_8 / 8usize);
-            
-            // Generate the const byte array initialization
+
             let const_bytes_init = self.generate_const_default_bytes(config, &byte_count);
 
             quote_spanned!(span=>
@@ -394,7 +391,6 @@ impl BitfieldStruct {
                 }
             )
         } else {
-            // Original const constructor when no defaults
             quote_spanned!(span=>
                 impl #impl_generics #ident #ty_generics #where_clause
                 {
@@ -790,83 +786,78 @@ impl BitfieldStruct {
 
     /// Generates a const expression that creates a byte array with default values applied.
     /// This uses const-compatible bit manipulation to set default values at compile time.
-    fn generate_const_default_bytes(&self, config: &Config, byte_count: &TokenStream2) -> TokenStream2 {
+    fn generate_const_default_bytes(
+        &self,
+        config: &Config,
+        byte_count: &TokenStream2,
+    ) -> TokenStream2 {
         let span = self.item_struct.span();
-        
+
         let mut bit_manipulations = Vec::new();
         let mut current_offset = quote! { 0usize };
-        
+
         for info in self.field_infos(config) {
             let field_config = &info.config;
             let field_type = &info.field.ty;
             let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
-            
-            // Add default value assignment if present
+
             if let Some(default_config) = &field_config.default {
                 if !field_config.skip_setters() {
                     let default_value = &default_config.value;
-                    
-                    // Generate const-compatible value conversion
-                    let const_value = self.generate_const_value_conversion(field_type, default_value, default_config.span);
-                    
-                    // Generate bit manipulation at current offset
+
+                    let const_value = self.generate_const_value_conversion(
+                        field_type,
+                        default_value,
+                        default_config.span,
+                    );
+
                     let bit_manipulation = quote_spanned!(default_config.span=> {
-                        // Set field value at bit offset
                         let field_offset = #current_offset;
                         let field_value = #const_value;
                         let field_bits = #field_bits;
-                        
-                        // Simple bit manipulation that works in const context
+
                         let start_byte = field_offset / 8;
                         let start_bit = field_offset % 8;
-                        
-                        // Handle fields that fit within a single byte
+
                         if start_bit + field_bits <= 8 {
                             if field_bits == 8 && start_bit == 0 {
-                                // Full byte assignment
                                 bytes[start_byte] = field_value as u8;
                             } else if field_bits < 8 {
-                                // Partial byte assignment
                                 let mask = ((1u8 << field_bits) - 1) << start_bit;
                                 let shifted_value = (field_value as u8) << start_bit;
                                 bytes[start_byte] = (bytes[start_byte] & !mask) | shifted_value;
                             }
                         } else if field_bits == 16 && start_bit == 0 {
-                            // 16-bit aligned field
                             let value = field_value as u16;
                             bytes[start_byte] = value as u8;
                             bytes[start_byte + 1] = (value >> 8) as u8;
                         } else if field_bits == 32 && start_bit == 0 {
-                            // 32-bit aligned field
                             let value = field_value as u32;
                             bytes[start_byte] = value as u8;
                             bytes[start_byte + 1] = (value >> 8) as u8;
                             bytes[start_byte + 2] = (value >> 16) as u8;
                             bytes[start_byte + 3] = (value >> 24) as u8;
                         } else {
-                            // Multi-byte field with bit manipulation
                             let mut remaining_bits = field_bits;
                             let mut value = field_value as u64;
                             let mut byte_idx = start_byte;
                             let mut bit_pos = start_bit;
-                            
+
                             while remaining_bits > 0 {
                                 let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
                                     remaining_bits
                                 } else {
                                     8 - bit_pos
                                 };
-                                
-                                // Avoid shift overflow by checking bit count
+
                                 if bits_in_this_byte > 0 && bits_in_this_byte < 8 {
                                     let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
                                     let byte_value = ((value & ((1u64 << bits_in_this_byte) - 1)) as u8) << bit_pos;
                                     bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
                                 } else if bits_in_this_byte == 8 && bit_pos == 0 {
-                                    // Full byte write
                                     bytes[byte_idx] = value as u8;
                                 }
-                                
+
                                 value >>= bits_in_this_byte;
                                 remaining_bits -= bits_in_this_byte;
                                 byte_idx += 1;
@@ -874,20 +865,17 @@ impl BitfieldStruct {
                             }
                         }
                     });
-                    
+
                     bit_manipulations.push(bit_manipulation);
                 }
             }
-            
-            // Advance offset for next field
+
             current_offset = quote! { #current_offset + #field_bits };
         }
 
         if bit_manipulations.is_empty() {
-            // No defaults, just return zero array
             quote_spanned!(span=> [0u8; #byte_count])
         } else {
-            // Generate const block that builds the byte array
             quote_spanned!(span=> {
                 let mut bytes = [0u8; #byte_count];
                 #( #bit_manipulations )*
@@ -897,14 +885,13 @@ impl BitfieldStruct {
     }
 
     /// Generates const-compatible value conversion for different field types.
-    fn generate_const_value_conversion(&self, field_type: &syn::Type, default_value: &syn::Expr, span: proc_macro2::Span) -> TokenStream2 {
-        // Generate code that handles the most common cases with const-compatible casting
+    fn generate_const_value_conversion(
+        &self,
+        field_type: &syn::Type,
+        default_value: &syn::Expr,
+        span: proc_macro2::Span,
+    ) -> TokenStream2 {
         quote_spanned!(span=> {
-            // Cast the default value to the appropriate byte type
-            // This will work for:
-            // - bool: true as u8, false as u8  
-            // - enum variants: Status::Green as u8
-            // - integer literals: 42 as u8
             #default_value as <#field_type as ::modular_bitfield::Specifier>::Bytes
         })
     }

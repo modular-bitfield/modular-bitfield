@@ -17,7 +17,7 @@ fn basic_default_without_field_defaults() {
 
     // Default should be identical to new()
     assert_eq!(default_bf, new_bf);
-    
+
     // All fields should be zero-initialized
     assert!(!default_bf.flag());
     assert_eq!(default_bf.value(), 0);
@@ -47,7 +47,7 @@ fn default_with_field_defaults() {
 
     // Default should be identical to new()
     assert_eq!(default_bf, new_bf);
-    
+
     // Fields with defaults should use default values
     assert!(default_bf.flag());
     assert_eq!(default_bf.value(), 42);
@@ -82,7 +82,7 @@ fn default_with_enum_fields() {
 
     // Default should be identical to new()
     assert_eq!(default_bf, new_bf);
-    
+
     // Check field values
     assert_eq!(default_bf.status(), Status::Running);
     assert!(default_bf.enabled());
@@ -106,7 +106,7 @@ fn default_tuple_struct() {
 
     // Default should be identical to new()
     assert_eq!(default_bf, new_bf);
-    
+
     // Check field values
     assert!(default_bf.get_0());
     assert_eq!(default_bf.get_1(), 255);
@@ -118,7 +118,7 @@ fn default_tuple_struct() {
 #[test]
 fn default_with_complex_expressions() {
     const DEFAULT_VALUE: u8 = 42;
-    
+
     #[bitfield]
     #[derive(Default, PartialEq, Debug)]
     pub struct ComplexDefaults {
@@ -135,7 +135,7 @@ fn default_with_complex_expressions() {
 
     // Default should be identical to new()
     assert_eq!(default_bf, new_bf);
-    
+
     // Check field values
     assert_eq!(default_bf.a(), 3); // 1 + 2
     assert_eq!(default_bf.b(), DEFAULT_VALUE);
@@ -146,7 +146,7 @@ fn default_with_complex_expressions() {
 fn default_preserves_other_derives() {
     extern crate alloc;
     use alloc::format;
-    
+
     #[bitfield]
     #[derive(Default, Debug, Clone, PartialEq, Eq)]
     pub struct MultiDerive {
@@ -160,12 +160,12 @@ fn default_preserves_other_derives() {
 
     let default_bf = MultiDerive::default();
     let cloned_bf = default_bf.clone();
-    
+
     // Test that all derives work
     assert_eq!(default_bf, cloned_bf);
     // Test Debug implementation works
     let _debug_str = format!("{:?}", default_bf);
-    
+
     // Check values
     assert!(default_bf.flag());
     assert_eq!(default_bf.value(), 123);

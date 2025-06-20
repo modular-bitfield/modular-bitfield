@@ -155,10 +155,7 @@ impl Config {
                         default.span,
                         "cannot use #[default(...)] on field that skips setters"
                     )
-                    .into_combine(format_err!(
-                        skip.span,
-                        "field skips setters here"
-                    )));
+                    .into_combine(format_err!(skip.span, "field skips setters here")));
                 }
             }
         }

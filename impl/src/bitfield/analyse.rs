@@ -229,7 +229,6 @@ impl BitfieldStruct {
             } else if attr.path().is_ident("default") {
                 match &attr.meta {
                     syn::Meta::List(meta_list) => {
-                        // Parse the default value expression inside the parentheses
                         let default_value: syn::Expr = meta_list.parse_args()?;
                         config.set_default(default_value, meta_list.span())?;
                     }
