@@ -125,7 +125,7 @@ impl BitfieldStruct {
                 field,
                 config,
             } = &info;
-            if config.skip_getters() {
+            if config.skip_getters().is_some() {
                 return None;
             }
             let field_span = field.span();
@@ -572,7 +572,7 @@ impl BitfieldStruct {
             field,
             config,
         } = info;
-        if config.skip_getters() {
+        if config.skip_getters().is_some() {
             return None;
         }
         let struct_ident = &self.item_struct.ident;
@@ -638,7 +638,7 @@ impl BitfieldStruct {
             field,
             config,
         } = info;
-        if config.skip_setters() {
+        if config.skip_setters().is_some() {
             return None;
         }
         let struct_ident = &self.item_struct.ident;
@@ -802,7 +802,7 @@ impl BitfieldStruct {
             let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
 
             if let Some(default_config) = &field_config.default {
-                if !field_config.skip_setters() {
+                if field_config.skip_setters().is_none() {
                     let default_value = &default_config.value;
 
                     let const_value = self.generate_const_value_conversion(

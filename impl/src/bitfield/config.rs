@@ -149,13 +149,13 @@ impl Config {
     pub fn ensure_no_default_and_skip_conflict(&self) -> Result<()> {
         for config_value in self.field_configs.values() {
             let field_config = &config_value.value;
-            if let (Some(default), Some(skip)) = (&field_config.default, &field_config.skip) {
-                if field_config.skip_setters() {
+            if let Some(default) = &field_config.default {
+                if let Some(skip_span) = field_config.skip_setters() {
                     return Err(format_err!(
                         default.span,
                         "cannot use #[default(...)] on field that skips setters"
                     )
-                    .into_combine(format_err!(skip.span, "field skips setters here")));
+                    .into_combine(format_err!(*skip_span, "field skips setters here")));
                 }
             }
         }

@@ -122,18 +122,20 @@ impl FieldConfig {
         Ok(())
     }
 
-    /// Returns `true` if the config demands that code generation for setters should be skipped.
-    pub fn skip_setters(&self) -> bool {
+    /// Returns the span of the skip attribute if the config demands that code generation for setters should be skipped.
+    pub fn skip_setters(&self) -> Option<&Span> {
         self.skip
             .as_ref()
-            .is_some_and(|config| SkipWhich::skip_setters(config.value))
+            .filter(|config| SkipWhich::skip_setters(config.value))
+            .map(|config| &config.span)
     }
 
-    /// Returns `true` if the config demands that code generation for getters should be skipped.
-    pub fn skip_getters(&self) -> bool {
+    /// Returns the span of the skip attribute if the config demands that code generation for getters should be skipped.
+    pub fn skip_getters(&self) -> Option<&Span> {
         self.skip
             .as_ref()
-            .is_some_and(|config| SkipWhich::skip_getters(config.value))
+            .filter(|config| SkipWhich::skip_getters(config.value))
+            .map(|config| &config.span)
     }
 
     /// Sets the `#[default(...)]` if found for a `#[bitfield]` annotated field.
