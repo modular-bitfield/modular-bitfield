@@ -9,10 +9,9 @@ By default this generates the following API:
     1. `new()`: When any field has a `#[default = ...]` attribute, this applies the specified 
        default values. When no defaults are specified, initializes all bits to 0.
        Note that invalid bit patterns are supported in that getters and setters will
-       be protecting accesses. This constructor is always `const fn`.
+       be protecting accesses.
     2. `new_zeroed()`: Generated when any field has a `#[default = ...]` attribute.
        Always initializes all bits to 0, ignoring any default values.
-       This constructor is always `const fn`.
 
 - **Getters:**
 
@@ -220,9 +219,6 @@ assert_eq!(config2.flags(), 0);
 
 - The `#[default = ...]` attribute cannot be used on fields that skip setter generation
   (i.e., fields marked with `#[skip]` or `#[skip(setters)]`).
-- Default values must be valid for the field's type and bit width.
-- Default expressions must be const-evaluable (literals, const variables, enum variants, simple const expressions).
-- Both `new()` and `new_zeroed()` constructors are `const fn` and work in const contexts.
 
 # Features
 
@@ -268,10 +264,9 @@ pub struct Base {
 
 ## Support: `#[derive(Default)]`
 
-If a `#[derive(Default)]` is found by the `#[bitfield]` a `Default` implementation
-is generated that calls `Self::new()`. This means that when fields have `#[default = ...]`
-attributes, those default values will be applied. When no defaults are specified,
-all fields are zero-initialized.
+If a `#[derive(Default)]` is found by the `#[bitfield]` an implementation of `Default`
+is generated for the bitfield struct. The generated implementation will respect any
+`#[default = ...]` attributes on fields.
 
 ### Example
 
@@ -285,14 +280,14 @@ pub struct Config {
     auto_restart: bool,
     #[default = 5]
     retry_count: B6,
-    flags: B8, // no default, so zero-initialized
+    flags: B8,
 }
 
 let config = Config::default();
-assert_eq!(config.enabled(), false);     // zero-initialized
-assert_eq!(config.auto_restart(), true); // uses default value
-assert_eq!(config.retry_count(), 5);     // uses default value
-assert_eq!(config.flags(), 0);           // zero-initialized
+assert_eq!(config.enabled(), false);
+assert_eq!(config.auto_restart(), true);
+assert_eq!(config.retry_count(), 5);
+assert_eq!(config.flags(), 0);
 ```
 
 ## Support: `#[derive(Debug)]`
