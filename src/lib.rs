@@ -20,51 +20,51 @@ pub mod prelude {
     pub use super::{bitfield, specifiers::*, Specifier};
 }
 
-/// Trait implemented by all bitfield specifiers.
+/// The `Specifier` trait describes a sequence of bits stored in an integer
+/// primitive (the [`Bytes`](Self::Bytes) type) and how to convert them to/from
+/// a more convenient higher-level interface type (the [`InOut`](Self::InOut)
+/// type).
 ///
-/// Should generally not be implemented directly by users
-/// but through the macros provided by the crate.
+/// For example:
 ///
-/// # Note
+/// * The `Specifier` for `bool` converts between a `u8` with a 1 or 0 bit in
+///   the lowest bit position and a native `bool` type.
+/// * The `Specifier` for a unit enum with variants `{0, 1, 14}` converts
+///   between a `u16` matching those variants and the enum type.
+/// * The `Specifier` for a 20-bit struct converts between a `u32` and the
+///   struct type.
 ///
-/// These can be all unsigned fixed-size primitives,
-/// represented by `B1, B2, ... B64` and enums that
-/// derive from `Specifier`.
+/// This trait should usually only be implemented by `#[derive(Specifier)]`.
 pub trait Specifier {
-    /// The amount of bits used by the specifier.
+    /// The number of bits used by the `Specifier`.
     const BITS: usize;
 
-    /// The base type of the specifier.
-    ///
-    /// # Note
-    ///
-    /// This is the type that is used internally for computations.
+    /// The storage type. This is typically the smallest integer primitive that
+    /// can store all possible values of the [`InOut`] type.
     type Bytes;
 
-    /// The interface type of the specifier.
-    ///
-    /// # Note
-    ///
-    /// This is the type that is used for the getters and setters.
+    /// The interface type. This type is used by getters and setters. For
+    /// integers, this is the same as the [`Bytes`] type; for other types with
+    /// more logical representations, like an enum or struct, this is the enum
+    /// or struct.
     type InOut;
 
-    /// Converts the in-out type into bytes.
+    /// Converts an interface type into its storage type.
     ///
     /// # Errors
     ///
-    /// If the in-out type is out of bounds. This can for example happen if your
-    /// in-out type is `u8` (for `B7`) but you specified a value that is bigger
-    /// or equal to 128 which exceeds the 7 bits.
+    /// If the input value is out of bounds, an error will be returned. For
+    /// example, the value `b100_u8` cannot be converted with `B2` because it is
+    /// three bits wide.
     fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds>;
 
-    /// Converts the given bytes into the in-out type.
+    /// Converts a storage type into its interface type.
     ///
     /// # Errors
     ///
-    /// If the given byte pattern is invalid for the in-out type.
-    /// This can happen for example for enums that have a number of variants which
-    /// is not equal to the power of two and therefore yields some invalid bit
-    /// patterns.
+    /// If the given bit pattern is invalid for the interface type, an error
+    /// will be returned. For example, `3_u8` cannot be converted to an enum
+    /// which only has variants `{0, 1, 2}`.
     fn from_bytes(bytes: Self::Bytes) -> Result<Self::InOut, InvalidBitPattern<Self::Bytes>>;
 }
 
