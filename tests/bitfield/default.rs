@@ -143,7 +143,7 @@ fn nested_bitfield_defaults() {
     }
 
     let bf = NestedDefaults::new();
-    assert_eq!(bf.nibble().value(), 0); // No default, so zero-initialized
+    assert_eq!(bf.nibble().value(), 0xF); // Should use Nibble's default
     assert_eq!(bf.data(), 0xAB);
 }
 
@@ -324,14 +324,31 @@ fn nested_specifier_construction() {
         data: B8,
     }
 
-    // Test that new() applies defaults (only data has default now)
+    // Test that new() applies defaults
     let bf_defaults = NestedSpecifierDefaults::new();
     assert_eq!(bf_defaults.data(), 0x42);
 
-    // Verify the flags field is zero-initialized (no default specified for flags field)
+    // Verify the flags field uses Flags::DEFAULT (which includes configured defaults)
     let flags = bf_defaults.flags();
-    assert!(!flags.enabled()); // zero-initialized
-    assert!(!flags.debug()); // zero-initialized
-    assert!(!flags.verbose()); // zero-initialized
-    assert_eq!(flags.level(), 0); // zero-initialized
+    assert!(flags.enabled()); // default = true
+    assert!(!flags.debug()); // default = false
+    assert!(flags.verbose()); // default = true
+    assert_eq!(flags.level(), 0b11111); // default = 0b11111
+}
+
+#[test]
+fn specifier_default_matches_constructor() {
+    #[bitfield(bits = 8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
+    struct WithDefaults {
+        #[default = true]
+        flag: bool,
+        #[default = 0x7]
+        value: B7,
+    }
+
+    let instance = WithDefaults::new();
+    let from_default = WithDefaults::from_bytes(WithDefaults::DEFAULT.to_le_bytes());
+    
+    assert_eq!(instance.into_bytes(), from_default.into_bytes());
 }

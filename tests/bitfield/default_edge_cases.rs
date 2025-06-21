@@ -415,9 +415,9 @@ mod complex_scenarios {
         assert_eq!(OUTER.prefix(), 0);
         assert_eq!(OUTER.suffix(), 0xFF);
 
-        // The nested field should be zero-initialized since no default is applied
+        // The nested field should use NestedBitfield::DEFAULT
         let nested = OUTER.nested();
-        assert!(!nested.inner_flag());
-        assert_eq!(nested.inner_value(), 0);
+        assert!(nested.inner_flag()); // default = true
+        assert_eq!(nested.inner_value(), 0x7); // default = 0x7
     }
 }

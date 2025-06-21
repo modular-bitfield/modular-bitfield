@@ -57,6 +57,28 @@ impl BitfieldStruct {
             };)
         });
 
+        let has_defaults = self
+            .field_infos(config)
+            .any(|info| info.config.default.is_some());
+
+        let default_impl = if has_defaults {
+            let byte_count = quote! { #next_divisible_by_8 / 8usize };
+            let default_bytes = self.generate_const_default_bytes(config, &byte_count);
+            
+            quote! {
+                // Two-path design: Specifier types compute DEFAULT here to avoid 
+                // duplicating bit manipulation logic in the constructor
+                const DEFAULT: Self::Bytes = {
+                    let bytes: [u8; #byte_count] = #default_bytes;
+                    Self::Bytes::from_le_bytes(bytes)
+                };
+            }
+        } else {
+            quote! {
+                const DEFAULT: Self::Bytes = 0;
+            }
+        };
+
         Some(quote_spanned!(span=>
             #deprecation_warning
 
@@ -70,6 +92,7 @@ impl BitfieldStruct {
             #[allow(clippy::identity_op)]
             impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
                 const BITS: usize = #bits;
+                #default_impl
 
                 type Bytes = <[(); if #bits > 128 { 128 } else { #bits }] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
                 type InOut = Self;
@@ -357,54 +380,79 @@ impl BitfieldStruct {
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
+        let byte_count = quote_spanned!(span=> #next_divisible_by_8 / 8usize);
 
         let has_defaults = self
             .field_infos(config)
             .any(|info| info.config.default.is_some());
+        let derives_specifier = config.derive_specifier.is_some();
 
-        if has_defaults {
-            let byte_count = quote_spanned!(span=> #next_divisible_by_8 / 8usize);
+        match (has_defaults, derives_specifier) {
+            (true, true) => {
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with default values applied.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: <Self as ::modular_bitfield::Specifier>::DEFAULT.to_le_bytes()
+                            }
+                        }
 
-            let const_bytes_init = self.generate_const_default_bytes(config, &byte_count);
-
-            quote_spanned!(span=>
-                impl #impl_generics #ident #ty_generics #where_clause
-                {
-                    /// Returns an instance with default values applied.
-                    #[allow(clippy::identity_op)]
-                    #[allow(clippy::new_without_default)]
-                    #[must_use]
-                    pub const fn new() -> Self {
-                        Self {
-                            bytes: #const_bytes_init,
+                        /// Returns an instance with all bits initialized to zero.
+                        #[allow(clippy::identity_op)]
+                        #[must_use]
+                        pub const fn new_zeroed() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
                         }
                     }
+                )
+            }
+            (true, false) => {
+                let const_bytes_init = self.generate_const_default_bytes(config, &byte_count);
+                
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with default values applied.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: #const_bytes_init
+                            }
+                        }
 
-                    /// Returns an instance with all bits initialized to zero.
-                    #[allow(clippy::identity_op)]
-                    #[must_use]
-                    pub const fn new_zeroed() -> Self {
-                        Self {
-                            bytes: [0u8; #byte_count],
+                        /// Returns an instance with all bits initialized to zero.
+                        #[allow(clippy::identity_op)]
+                        #[must_use]
+                        pub const fn new_zeroed() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
                         }
                     }
-                }
-            )
-        } else {
-            quote_spanned!(span=>
-                impl #impl_generics #ident #ty_generics #where_clause
-                {
-                    /// Returns an instance with zero initialized data.
-                    #[allow(clippy::identity_op)]
-                    #[allow(clippy::new_without_default)]
-                    #[must_use]
-                    pub const fn new() -> Self {
-                        Self {
-                            bytes: [0u8; #next_divisible_by_8 / 8usize],
+                )
+            }
+            (false, _) => {
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with zero initialized data.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     }
 
@@ -801,75 +849,78 @@ impl BitfieldStruct {
             let field_type = &info.field.ty;
             let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
 
-            if let Some(default_config) = &field_config.default {
-                if field_config.skip_setters().is_none() {
-                    let default_value = &default_config.value;
-
-                    let const_value = self.generate_const_value_conversion(
-                        field_type,
-                        default_value,
-                        default_config.span,
-                    );
-
-                    let bit_manipulation = quote_spanned!(default_config.span=> {
-                        let field_offset = #current_offset;
-                        let field_value = #const_value;
-                        let field_bits = #field_bits;
-
-                        let start_byte = field_offset / 8;
-                        let start_bit = field_offset % 8;
-
-                        if start_bit + field_bits <= 8 {
-                            if field_bits == 8 && start_bit == 0 {
-                                bytes[start_byte] = field_value as u8;
-                            } else if field_bits < 8 {
-                                let mask = ((1u8 << field_bits) - 1) << start_bit;
-                                let shifted_value = (field_value as u8) << start_bit;
-                                bytes[start_byte] = (bytes[start_byte] & !mask) | shifted_value;
-                            }
-                        } else if field_bits == 16 && start_bit == 0 {
-                            let value = field_value as u16;
-                            bytes[start_byte] = value as u8;
-                            bytes[start_byte + 1] = (value >> 8) as u8;
-                        } else if field_bits == 32 && start_bit == 0 {
-                            let value = field_value as u32;
-                            bytes[start_byte] = value as u8;
-                            bytes[start_byte + 1] = (value >> 8) as u8;
-                            bytes[start_byte + 2] = (value >> 16) as u8;
-                            bytes[start_byte + 3] = (value >> 24) as u8;
-                        } else {
-                            let mut remaining_bits = field_bits;
-                            let mut value = field_value as u64;
-                            let mut byte_idx = start_byte;
-                            let mut bit_pos = start_bit;
-
-                            while remaining_bits > 0 {
-                                let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
-                                    remaining_bits
-                                } else {
-                                    8 - bit_pos
-                                };
-
-                                if bits_in_this_byte > 0 && bits_in_this_byte < 8 {
-                                    let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
-                                    let byte_value = ((value & ((1u64 << bits_in_this_byte) - 1)) as u8) << bit_pos;
-                                    bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
-                                } else if bits_in_this_byte == 8 && bit_pos == 0 {
-                                    bytes[byte_idx] = value as u8;
-                                }
-
-                                value >>= bits_in_this_byte;
-                                remaining_bits -= bits_in_this_byte;
-                                byte_idx += 1;
-                                bit_pos = 0;
-                            }
-                        }
-                    });
-
-                    bit_manipulations.push(bit_manipulation);
-                }
+            if field_config.skip_setters().is_some() {
+                current_offset = quote! { #current_offset + #field_bits };
+                continue;
             }
 
+            let const_value = if let Some(default_config) = &field_config.default {
+                let default_value = &default_config.value;
+                self.generate_const_value_conversion(
+                    field_type,
+                    default_value,
+                    default_config.span,
+                )
+            } else {
+                quote! { <#field_type as ::modular_bitfield::Specifier>::DEFAULT }
+            };
+
+            let bit_manipulation = quote_spanned!(span=> {
+                let field_offset = #current_offset;
+                let field_value = #const_value;
+                let field_bits = #field_bits;
+
+                let start_byte = field_offset / 8;
+                let start_bit = field_offset % 8;
+
+                if start_bit + field_bits <= 8 {
+                    if field_bits == 8 && start_bit == 0 {
+                        bytes[start_byte] = field_value as u8;
+                    } else if field_bits < 8 {
+                        let mask = ((1u8 << field_bits) - 1) << start_bit;
+                        let shifted_value = (field_value as u8) << start_bit;
+                        bytes[start_byte] = (bytes[start_byte] & !mask) | shifted_value;
+                    }
+                } else if field_bits == 16 && start_bit == 0 {
+                    let value = field_value as u16;
+                    bytes[start_byte] = value as u8;
+                    bytes[start_byte + 1] = (value >> 8) as u8;
+                } else if field_bits == 32 && start_bit == 0 {
+                    let value = field_value as u32;
+                    bytes[start_byte] = value as u8;
+                    bytes[start_byte + 1] = (value >> 8) as u8;
+                    bytes[start_byte + 2] = (value >> 16) as u8;
+                    bytes[start_byte + 3] = (value >> 24) as u8;
+                } else {
+                    let mut remaining_bits = field_bits;
+                    let mut value = field_value as u64;
+                    let mut byte_idx = start_byte;
+                    let mut bit_pos = start_bit;
+
+                    while remaining_bits > 0 {
+                        let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
+                            remaining_bits
+                        } else {
+                            8 - bit_pos
+                        };
+
+                        if bits_in_this_byte > 0 && bits_in_this_byte < 8 {
+                            let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
+                            let byte_value = ((value & ((1u64 << bits_in_this_byte) - 1)) as u8) << bit_pos;
+                            bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
+                        } else if bits_in_this_byte == 8 && bit_pos == 0 {
+                            bytes[byte_idx] = value as u8;
+                        }
+
+                        value >>= bits_in_this_byte;
+                        remaining_bits -= bits_in_this_byte;
+                        byte_idx += 1;
+                        bit_pos = 0;
+                    }
+                }
+            });
+
+            bit_manipulations.push(bit_manipulation);
             current_offset = quote! { #current_offset + #field_bits };
         }
 
