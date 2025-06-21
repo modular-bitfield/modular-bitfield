@@ -27,6 +27,8 @@ fn all_primitive_types() {
         flag: bool,
         #[default = 0b11]
         two_bits: B2,
+        #[default = 0x1F]
+        padding: B5,
         #[default = 0xFF]
         byte: B8,
         #[default = 0x1234]
@@ -36,6 +38,7 @@ fn all_primitive_types() {
     let bf = PrimitiveDefaults::new();
     assert!(bf.flag());
     assert_eq!(bf.two_bits(), 0b11);
+    assert_eq!(bf.padding(), 0x1F);
     assert_eq!(bf.byte(), 0xFF);
     assert_eq!(bf.word(), 0x1234);
 }
@@ -275,6 +278,10 @@ fn max_value_defaults() {
         flag: bool,
         #[default = 0xFF]
         byte: B8,
+        #[default = 0xFFFFFFFFFFFFFFFF]
+        large: B64,
+        #[default = 0x123456789ABCDEF0123456789ABCDEF0]
+        huge: B128,
     }
 
     let bf = MaxValues::new();
@@ -282,4 +289,6 @@ fn max_value_defaults() {
     assert_eq!(bf.sixteen_bits(), 0xFFFF);
     assert!(bf.flag());
     assert_eq!(bf.byte(), 0xFF);
+    assert_eq!(bf.large(), 0xFFFFFFFFFFFFFFFF);
+    assert_eq!(bf.huge(), 0x123456789ABCDEF0123456789ABCDEF0);
 }

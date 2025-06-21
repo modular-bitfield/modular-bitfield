@@ -866,53 +866,30 @@ impl BitfieldStruct {
                 let field_value = #const_value;
                 let field_bits = #field_bits;
 
-                let start_byte = field_offset / 8;
-                let start_bit = field_offset % 8;
+                let mut remaining_bits = field_bits;
+                let mut value = field_value as u128;
+                let mut byte_idx = field_offset / 8;
+                let mut bit_pos = field_offset % 8;
 
-                if start_bit + field_bits <= 8 {
-                    if field_bits == 8 && start_bit == 0 {
-                        bytes[start_byte] = field_value as u8;
-                    } else if field_bits < 8 {
-                        let mask = ((1u8 << field_bits) - 1) << start_bit;
-                        let shifted_value = (field_value as u8) << start_bit;
-                        bytes[start_byte] = (bytes[start_byte] & !mask) | shifted_value;
+                while remaining_bits > 0 {
+                    let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
+                        remaining_bits
+                    } else {
+                        8 - bit_pos
+                    };
+
+                    if bits_in_this_byte == 8 && bit_pos == 0 {
+                        bytes[byte_idx] = value as u8;
+                    } else {
+                        let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
+                        let byte_value = (value as u8) << bit_pos;
+                        bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
                     }
-                } else if field_bits == 16 && start_bit == 0 {
-                    let value = field_value as u16;
-                    bytes[start_byte] = value as u8;
-                    bytes[start_byte + 1] = (value >> 8) as u8;
-                } else if field_bits == 32 && start_bit == 0 {
-                    let value = field_value as u32;
-                    bytes[start_byte] = value as u8;
-                    bytes[start_byte + 1] = (value >> 8) as u8;
-                    bytes[start_byte + 2] = (value >> 16) as u8;
-                    bytes[start_byte + 3] = (value >> 24) as u8;
-                } else {
-                    let mut remaining_bits = field_bits;
-                    let mut value = field_value as u64;
-                    let mut byte_idx = start_byte;
-                    let mut bit_pos = start_bit;
 
-                    while remaining_bits > 0 {
-                        let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
-                            remaining_bits
-                        } else {
-                            8 - bit_pos
-                        };
-
-                        if bits_in_this_byte > 0 && bits_in_this_byte < 8 {
-                            let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
-                            let byte_value = ((value & ((1u64 << bits_in_this_byte) - 1)) as u8) << bit_pos;
-                            bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
-                        } else if bits_in_this_byte == 8 && bit_pos == 0 {
-                            bytes[byte_idx] = value as u8;
-                        }
-
-                        value >>= bits_in_this_byte;
-                        remaining_bits -= bits_in_this_byte;
-                        byte_idx += 1;
-                        bit_pos = 0;
-                    }
+                    value >>= bits_in_this_byte;
+                    remaining_bits -= bits_in_this_byte;
+                    byte_idx += 1;
+                    bit_pos = 0;
                 }
             });
 
