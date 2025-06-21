@@ -849,10 +849,6 @@ impl BitfieldStruct {
             let field_type = &info.field.ty;
             let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
 
-            if field_config.skip_setters().is_some() {
-                current_offset = quote! { #current_offset + #field_bits };
-                continue;
-            }
 
             let const_value = if let Some(default_config) = &field_config.default {
                 let default_value = &default_config.value;

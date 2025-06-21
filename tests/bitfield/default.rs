@@ -352,3 +352,47 @@ fn specifier_default_matches_constructor() {
     
     assert_eq!(instance.into_bytes(), from_default.into_bytes());
 }
+
+#[test]
+fn default_with_skip_setters() {
+    #[bitfield]
+    pub struct DefaultWithSkipSetters {
+        #[default = 42]
+        #[skip(setters)]
+        pub field: B6,
+        #[default = 3]
+        pub other: B2,
+    }
+
+    let bf = DefaultWithSkipSetters::new();
+    assert_eq!(bf.field(), 42); // Default applied even though setters are skipped
+    assert_eq!(bf.other(), 3);
+    
+    // Verify that setters are indeed skipped (this should not compile if uncommented)
+    // bf.set_field(10); // ERROR: no method named `set_field`
+    
+    // But we can still set the other field
+    let bf2 = bf.with_other(2);
+    assert_eq!(bf2.field(), 42); // field unchanged
+    assert_eq!(bf2.other(), 2); // other changed
+}
+
+#[test]
+fn default_with_full_skip() {
+    #[bitfield]
+    pub struct DefaultWithSkip {
+        #[default = true]
+        #[skip]
+        _reserved: bool,
+        #[default = 0x7F]
+        data: B7,
+    }
+
+    let bf = DefaultWithSkip::new();
+    // Cannot access _reserved field (no getter or setter)
+    assert_eq!(bf.data(), 0x7F);
+    
+    // The default for _reserved is still applied in the internal representation
+    let bytes = bf.into_bytes();
+    assert_eq!(bytes[0] & 0x01, 1); // First bit (bool) is set to true
+}

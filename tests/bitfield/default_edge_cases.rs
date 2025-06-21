@@ -420,4 +420,25 @@ mod complex_scenarios {
         assert!(nested.inner_flag()); // default = true
         assert_eq!(nested.inner_value(), 0x7); // default = 0x7
     }
+
+    #[test]
+    fn default_with_skip_setters_padding() {
+        #[bitfield]
+        pub struct PaddedBitfield {
+            #[default = 0xFF]
+            data: B8,
+            #[default = 0x55]
+            #[skip(setters)]
+            padding: B8,  // Padding field with default
+        }
+
+        let bf = PaddedBitfield::new();
+        assert_eq!(bf.data(), 0xFF);
+        assert_eq!(bf.padding(), 0x55); // Default applied to padding field
+        
+        // Can modify data but not padding
+        let bf2 = bf.with_data(0xAA);
+        assert_eq!(bf2.data(), 0xAA);
+        assert_eq!(bf2.padding(), 0x55); // Padding unchanged
+    }
 }
