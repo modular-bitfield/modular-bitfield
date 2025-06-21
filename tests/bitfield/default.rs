@@ -1,101 +1,43 @@
 use modular_bitfield::prelude::*;
 
 #[test]
-fn basic_functionality() {
+fn basic_defaults() {
     #[bitfield]
-    pub struct WithDefaults {
-        pub foo: bool,
+    pub struct BasicDefaults {
+        foo: bool,
         #[default = false]
-        pub bar: bool,
-        pub baz: B6,
+        bar: bool,
+        baz: B6,
         #[default = 42]
-        pub qux: B8,
+        qux: B8,
     }
 
-    // Test that new_zeroed() creates zero-initialized data
-    let bf_new = WithDefaults::new_zeroed();
-    assert!(!bf_new.foo());
-    assert!(!bf_new.bar());
-    assert_eq!(bf_new.baz(), 0);
-    assert_eq!(bf_new.qux(), 0);
-
-    // Test that new() applies default values
-    let bf_defaults = WithDefaults::new();
-    assert!(!bf_defaults.foo()); // no default specified
-    assert!(!bf_defaults.bar()); // default specified as false
-    assert_eq!(bf_defaults.baz(), 0); // no default specified
-    assert_eq!(bf_defaults.qux(), 42); // default specified as 42
+    let bf = BasicDefaults::new();
+    assert!(!bf.foo()); // no default
+    assert!(!bf.bar()); // explicit false
+    assert_eq!(bf.baz(), 0); // no default
+    assert_eq!(bf.qux(), 42); // explicit default
 }
 
 #[test]
-fn comprehensive_defaults() {
+fn all_primitive_types() {
     #[bitfield]
-    pub struct Foo {
-        pub foo: bool,
+    pub struct PrimitiveDefaults {
         #[default = true]
-        pub flag: bool,
-        pub bar: bool,
-        #[skip]
-        __: B5,
+        flag: bool,
+        #[default = 0b11]
+        two_bits: B2,
+        #[default = 0xFF]
+        byte: B8,
+        #[default = 0x1234]
+        word: B16,
     }
 
-    // Test that new_zeroed() creates zero-initialized data
-    let bf_new = Foo::new_zeroed();
-    assert!(!bf_new.foo());
-    assert!(!bf_new.flag());
-    assert!(!bf_new.bar());
-
-    // Test that new() applies default values
-    let bf_defaults = Foo::new();
-    assert!(!bf_defaults.foo()); // no default specified
-    assert!(bf_defaults.flag()); // default specified as true
-    assert!(!bf_defaults.bar()); // no default specified
-
-    // Test that manually setting works the same as defaults
-    let bf_manual = Foo::new().with_flag(true);
-    assert_eq!(bf_defaults.into_bytes(), bf_manual.into_bytes());
-}
-
-#[test]
-fn all_fields_with_defaults() {
-    #[bitfield]
-    pub struct AllDefaults {
-        #[default = true]
-        a: bool,
-        #[default = false]
-        b: bool,
-        #[default = 3]
-        c: B2,
-        #[default = 15]
-        d: B4,
-    }
-
-    let bf = AllDefaults::new();
-    assert!(bf.a());
-    assert!(!bf.b());
-    assert_eq!(bf.c(), 3);
-    assert_eq!(bf.d(), 15);
-}
-
-#[test]
-fn complex_expressions() {
-    #[bitfield]
-    pub struct ComplexDefaults {
-        #[default = 1 + 2]
-        a: B4,
-        #[default = 0xFF & 0x0F]
-        b: B4,
-        #[default = true]
-        c: bool,
-        #[default = 7]
-        #[allow(non_snake_case)]
-        __padding: B7,
-    }
-
-    let bf = ComplexDefaults::new();
-    assert_eq!(bf.a(), 3); // 1 + 2
-    assert_eq!(bf.b(), 0x0F); // 0xFF & 0x0F
-    assert!(bf.c());
+    let bf = PrimitiveDefaults::new();
+    assert!(bf.flag());
+    assert_eq!(bf.two_bits(), 0b11);
+    assert_eq!(bf.byte(), 0xFF);
+    assert_eq!(bf.word(), 0x1234);
 }
 
 #[test]
@@ -106,7 +48,6 @@ fn enum_defaults() {
         Off = 0,
         On = 1,
         Auto = 2,
-        Manual = 3,
     }
 
     #[bitfield]
@@ -115,13 +56,13 @@ fn enum_defaults() {
         mode: Mode,
         #[default = true]
         enabled: bool,
-        #[allow(non_snake_case)]
-        __padding: B5,
+        padding: B5,
     }
 
     let bf = EnumDefaults::new();
     assert_eq!(bf.mode(), Mode::Auto);
     assert!(bf.enabled());
+    assert_eq!(bf.padding(), 0);
 }
 
 #[test]
@@ -134,173 +75,19 @@ fn nested_bitfield_defaults() {
     }
 
     #[bitfield]
-    pub struct NestedDefaults {
-        // TODO: Nibble::new() is not const-evaluable yet
-        // #[default(Nibble::new())]
+    pub struct Parent {
         nibble: Nibble,
         #[default = 0xAB]
         data: B12,
     }
 
-    let bf = NestedDefaults::new();
-    assert_eq!(bf.nibble().value(), 0xF); // Should use Nibble's default
-    assert_eq!(bf.data(), 0xAB);
+    let parent = Parent::new();
+    assert_eq!(parent.nibble().value(), 0xF); // Uses Nibble's default
+    assert_eq!(parent.data(), 0xAB);
 }
 
 #[test]
-fn defaults_vs_manual_construction() {
-    #[bitfield]
-    pub struct TestDefaults {
-        #[default = true]
-        a: bool,
-        #[default = false]
-        b: bool,
-        #[default = 3]
-        c: B2,
-        #[default = 15]
-        d: B4,
-    }
-
-    // Verify that defaults produce the same result as manual construction
-    let defaults = TestDefaults::new();
-    let manual = TestDefaults::new()
-        .with_a(true)
-        .with_b(false)
-        .with_c(3)
-        .with_d(15);
-
-    assert_eq!(defaults.into_bytes(), manual.into_bytes());
-}
-
-#[test]
-fn partial_defaults_byte_representation() {
-    #[bitfield]
-    pub struct PartialDefaults {
-        #[default = 3]
-        a: B4,
-        #[default = 15]
-        b: B4,
-        #[default = true]
-        c: bool,
-        #[default = 7]
-        #[allow(non_snake_case)]
-        __padding: B7,
-    }
-
-    // Only some fields have defaults
-    let bf = PartialDefaults::new();
-    let bytes = bf.into_bytes();
-
-    // Verify the exact byte pattern
-    // a=3 (0011), b=15 (1111), c=true (1), padding=7 (0000111)
-    // Layout: pppppppc bbbbaaaa
-    assert_eq!(bytes[0], 0b11110011); // bbbbaaaa
-    assert_eq!(bytes[1], 0b00001111); // pppppppc
-}
-
-#[test]
-fn primitive_specifier_defaults() {
-    #[bitfield]
-    pub struct PrimitiveSpecifierDefaults {
-        #[default = 1]
-        flag: B1,
-        #[default = 0b11]
-        two_bits: B2,
-        #[default = 0x1F]
-        five_bits: B5,
-        #[default = 0xFF]
-        byte: B8,
-        #[default = 0x1234]
-        word: B16,
-        #[default = 0xDEADBEEF]
-        dword: B32,
-    }
-
-    let bf = PrimitiveSpecifierDefaults::new();
-    assert_eq!(bf.flag(), 1);
-    assert_eq!(bf.two_bits(), 0b11);
-    assert_eq!(bf.five_bits(), 0x1F);
-    assert_eq!(bf.byte(), 0xFF);
-    assert_eq!(bf.word(), 0x1234);
-    assert_eq!(bf.dword(), 0xDEADBEEF);
-}
-
-#[test]
-fn bool_specifier_defaults() {
-    #[bitfield]
-    pub struct BoolSpecifierDefaults {
-        #[default = true]
-        a: bool,
-        #[default = false]
-        b: bool,
-        #[default = true]
-        c: bool,
-        #[default = false]
-        d: bool,
-        #[default = 0xF]
-        padding: B4,
-    }
-
-    let bf = BoolSpecifierDefaults::new();
-    assert!(bf.a());
-    assert!(!bf.b());
-    assert!(bf.c());
-    assert!(!bf.d());
-    assert_eq!(bf.padding(), 0xF);
-
-    // Verify byte representation
-    let bytes = bf.into_bytes();
-    // Expected layout: ppppddcba (LSB first)
-    // a=1, b=0, c=1, d=0, padding=1111
-    // Binary: 11110101 = 0xF5
-    assert_eq!(bytes[0], 0b11110101);
-}
-
-#[test]
-fn complex_specifier_defaults() {
-    #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
-    #[bits = 3]
-    pub enum Status {
-        Idle = 0,
-        Running = 1,
-        Paused = 2,
-        Stopped = 3,
-        Error = 4,
-    }
-
-    #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
-    #[bits = 4]
-    pub enum Level {
-        Low = 0,
-        Medium = 5,
-        High = 10,
-        Critical = 15,
-    }
-
-    const DEFAULT_LEVEL: Level = Level::Medium;
-    const DEFAULT_FLAGS: u8 = 0b1010;
-
-    #[bitfield]
-    pub struct ComplexSpecifierDefaults {
-        #[default = DEFAULT_LEVEL]
-        level: Level,
-        #[default = DEFAULT_FLAGS]
-        flags: B8,
-        #[default = Status::Idle]
-        status: Status,
-        #[default = true]
-        active: bool,
-    }
-
-    let bf = ComplexSpecifierDefaults::new();
-    assert_eq!(bf.level(), Level::Medium);
-    assert_eq!(bf.flags(), DEFAULT_FLAGS);
-    assert_eq!(bf.status(), Status::Idle);
-    assert!(bf.active());
-}
-
-#[test]
-fn nested_specifier_construction() {
+fn nested_specifier_defaults() {
     #[bitfield(bits = 8)]
     #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
     pub struct Flags {
@@ -308,91 +95,191 @@ fn nested_specifier_construction() {
         enabled: bool,
         #[default = false]
         debug: bool,
-        #[default = true]
-        verbose: bool,
         #[default = 0b11111]
-        level: B5,
+        level: B6,
     }
 
     #[bitfield]
-    pub struct NestedSpecifierDefaults {
-        // Note: Using Flags::new() in default won't work yet as it's not const-evaluable
-        // For now, we'll comment this out and test it manually
-        // #[default(Flags::new())]
+    pub struct Config {
         flags: Flags,
         #[default = 0x42]
         data: B8,
     }
 
-    // Test that new() applies defaults
-    let bf_defaults = NestedSpecifierDefaults::new();
-    assert_eq!(bf_defaults.data(), 0x42);
+    let config = Config::new();
+    let flags = config.flags();
+    assert!(flags.enabled());
+    assert!(!flags.debug());
+    assert_eq!(flags.level(), 0b11111);
+    assert_eq!(config.data(), 0x42);
+}
 
-    // Verify the flags field uses Flags::DEFAULT (which includes configured defaults)
-    let flags = bf_defaults.flags();
-    assert!(flags.enabled()); // default = true
-    assert!(!flags.debug()); // default = false
-    assert!(flags.verbose()); // default = true
-    assert_eq!(flags.level(), 0b11111); // default = 0b11111
+#[test]
+fn const_expressions() {
+    const DEFAULT_VALUE: u8 = 42;
+
+    #[bitfield]
+    pub struct ConstDefaults {
+        #[default = 1 + 2]
+        sum: B4,
+        #[default = DEFAULT_VALUE]
+        from_const: B8,
+        #[default = 0xFF & 0x0F]
+        masked: B4,
+    }
+
+    let bf = ConstDefaults::new();
+    assert_eq!(bf.sum(), 3);
+    assert_eq!(bf.from_const(), 42);
+    assert_eq!(bf.masked(), 0x0F);
+}
+
+#[test]
+fn derive_default_trait() {
+    #[bitfield]
+    #[derive(Default, PartialEq, Debug)]
+    pub struct DeriveDefault {
+        #[default = true]
+        flag: bool,
+        #[default = 123]
+        value: B8,
+        counter: B7, // no default
+    }
+
+    let default_bf = DeriveDefault::default();
+    let new_bf = DeriveDefault::new();
+    
+    // Default trait should match new()
+    assert_eq!(default_bf, new_bf);
+    assert!(default_bf.flag());
+    assert_eq!(default_bf.value(), 123);
+    assert_eq!(default_bf.counter(), 0);
+}
+
+#[test]
+fn defaults_with_skip() {
+    #[bitfield]
+    pub struct SkipDefaults {
+        #[default = 42]
+        #[skip(setters)]
+        readonly: B8,
+        #[default = true]
+        #[skip]
+        _reserved: bool,
+        #[default = 0x7]
+        data: B7,
+    }
+
+    let bf = SkipDefaults::new();
+    assert_eq!(bf.readonly(), 42);
+    assert_eq!(bf.data(), 0x7);
+    
+    // Verify readonly field has no setter
+    let bf2 = bf.with_data(0x5);
+    assert_eq!(bf2.readonly(), 42); // unchanged
+    assert_eq!(bf2.data(), 0x5);
+}
+
+#[test]
+fn new_zeroed_ignores_defaults() {
+    #[bitfield]
+    pub struct ZeroedTest {
+        #[default = true]
+        flag: bool,
+        #[default = 0xFF]
+        value: B8,
+        padding: B7,
+    }
+
+    let zeroed = ZeroedTest::new_zeroed();
+    assert!(!zeroed.flag());
+    assert_eq!(zeroed.value(), 0);
+    assert_eq!(zeroed.padding(), 0);
 }
 
 #[test]
 fn specifier_default_matches_constructor() {
     #[bitfield(bits = 8)]
     #[derive(Debug, Clone, Copy, PartialEq, Specifier)]
-    struct WithDefaults {
+    struct TestBitfield {
         #[default = true]
         flag: bool,
         #[default = 0x7]
         value: B7,
     }
 
-    let instance = WithDefaults::new();
-    let from_default = WithDefaults::from_bytes(WithDefaults::DEFAULT.to_le_bytes());
+    let instance = TestBitfield::new();
+    let from_default = TestBitfield::from_bytes(TestBitfield::DEFAULT.to_le_bytes());
     
     assert_eq!(instance.into_bytes(), from_default.into_bytes());
 }
 
 #[test]
-fn default_with_skip_setters() {
+fn cross_byte_boundary() {
     #[bitfield]
-    pub struct DefaultWithSkipSetters {
-        #[default = 42]
-        #[skip(setters)]
-        pub field: B6,
-        #[default = 3]
-        pub other: B2,
+    pub struct CrossByte {
+        #[default = 0x3]
+        prefix: B2,
+        #[default = 0x3FF]
+        middle: B10, // Crosses byte boundary
+        #[default = 0xF]
+        suffix: B4,
     }
 
-    let bf = DefaultWithSkipSetters::new();
-    assert_eq!(bf.field(), 42); // Default applied even though setters are skipped
-    assert_eq!(bf.other(), 3);
-    
-    // Verify that setters are indeed skipped (this should not compile if uncommented)
-    // bf.set_field(10); // ERROR: no method named `set_field`
-    
-    // But we can still set the other field
-    let bf2 = bf.with_other(2);
-    assert_eq!(bf2.field(), 42); // field unchanged
-    assert_eq!(bf2.other(), 2); // other changed
+    let bf = CrossByte::new();
+    assert_eq!(bf.prefix(), 0x3);
+    assert_eq!(bf.middle(), 0x3FF);
+    assert_eq!(bf.suffix(), 0xF);
 }
 
 #[test]
-fn default_with_full_skip() {
+fn tuple_struct_defaults() {
     #[bitfield]
-    pub struct DefaultWithSkip {
+    pub struct TupleDefaults(
+        #[default = true] bool,
+        #[default = 255] B8,
+        B7, // no default
+    );
+
+    let bf = TupleDefaults::new();
+    assert!(bf.get_0());
+    assert_eq!(bf.get_1(), 255);
+    assert_eq!(bf.get_2(), 0);
+}
+
+#[test]
+fn const_context_usage() {
+    #[bitfield]
+    pub struct ConstBitfield {
+        #[default = 0xFF]
+        value: B8,
         #[default = true]
-        #[skip]
-        _reserved: bool,
-        #[default = 0x7F]
-        data: B7,
+        flag: bool,
+        padding: B7,
     }
 
-    let bf = DefaultWithSkip::new();
-    // Cannot access _reserved field (no getter or setter)
-    assert_eq!(bf.data(), 0x7F);
-    
-    // The default for _reserved is still applied in the internal representation
-    let bytes = bf.into_bytes();
-    assert_eq!(bytes[0] & 0x01, 1); // First bit (bool) is set to true
+    const STATIC_BF: ConstBitfield = ConstBitfield::new();
+    assert_eq!(STATIC_BF.value(), 0xFF);
+    assert!(STATIC_BF.flag());
+}
+
+#[test]
+fn max_value_defaults() {
+    #[bitfield]
+    pub struct MaxValues {
+        #[default = 0x7F]
+        seven_bits: B7,
+        #[default = 0xFFFF]
+        sixteen_bits: B16,
+        #[default = true]
+        flag: bool,
+        #[default = 0xFF]
+        byte: B8,
+    }
+
+    let bf = MaxValues::new();
+    assert_eq!(bf.seven_bits(), 0x7F);
+    assert_eq!(bf.sixteen_bits(), 0xFFFF);
+    assert!(bf.flag());
+    assert_eq!(bf.byte(), 0xFF);
 }

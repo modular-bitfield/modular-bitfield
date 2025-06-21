@@ -6,10 +6,10 @@ By default this generates the following API:
 
 - **Constructors:**
 
-    1. `new()`: When any field has a `#[default = ...]` attribute, this applies the specified 
+    All constructors are `const fn`, allowing bitfield instances to be created in const contexts such as static variables or const expressions.
+
+    1. `new()`: When any field has a `#[default = ...]` attribute, this applies the specified
        default values. When no defaults are specified, initializes all bits to 0.
-       Note that invalid bit patterns are supported in that getters and setters will
-       be protecting accesses.
     2. `new_zeroed()`: Generated when any field has a `#[default = ...]` attribute.
        Always initializes all bits to 0, ignoring any default values.
 
