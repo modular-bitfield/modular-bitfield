@@ -845,11 +845,10 @@ impl BitfieldStruct {
         let mut current_offset = quote! { 0usize };
 
         for info in self.field_infos(config) {
-            let field_config = &info.config;
             let field_type = &info.field.ty;
             let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
 
-
+            let field_config = &info.config;
             let const_value = if let Some(default_config) = &field_config.default {
                 let default_value = &default_config.value;
                 let span = default_config.span;
