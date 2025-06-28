@@ -852,11 +852,10 @@ impl BitfieldStruct {
 
             let const_value = if let Some(default_config) = &field_config.default {
                 let default_value = &default_config.value;
-                self.generate_const_value_conversion(
-                    field_type,
-                    default_value,
-                    default_config.span,
-                )
+                let span = default_config.span;
+                quote_spanned!(span=> {
+                    #default_value as <#field_type as ::modular_bitfield::Specifier>::Bytes
+                })
             } else {
                 quote! { <#field_type as ::modular_bitfield::Specifier>::DEFAULT }
             };
@@ -908,15 +907,4 @@ impl BitfieldStruct {
         }
     }
 
-    /// Generates const-compatible value conversion for different field types.
-    fn generate_const_value_conversion(
-        &self,
-        field_type: &syn::Type,
-        default_value: &syn::Expr,
-        span: proc_macro2::Span,
-    ) -> TokenStream2 {
-        quote_spanned!(span=> {
-            #default_value as <#field_type as ::modular_bitfield::Specifier>::Bytes
-        })
-    }
 }
