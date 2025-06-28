@@ -4,13 +4,13 @@ error: encountered invalid value type for #[bits = N]
 20 |     #[bits = NOT_A_LITERAL]
    |              ^^^^^^^^^^^^^
 
-error: encountered duplicate `#[bits = N]` attribute for field
+error: encountered duplicate `#[bits = ...]` attribute for field
   --> tests/ui/bits_attribute_wrong.rs:28:7
    |
 28 |     #[bits = 1]
    |       ^^^^^^^^
 
-error: duplicate `#[bits = N]` here
+error: duplicate `#[bits = ...]` here
   --> tests/ui/bits_attribute_wrong.rs:27:7
    |
 27 |     #[bits = 1]

@@ -165,7 +165,7 @@ impl BitfieldStruct {
 
     /// Extracts the `#[bits = N]` and `#[skip(..)]` attributes for a given field.
     fn extract_field_config(field: &syn::Field) -> Result<FieldConfig> {
-        let mut config = FieldConfig::default();
+        let mut config = FieldConfig::new();
         for attr in &field.attrs {
             if attr.path().is_ident("bits") {
                 let name_value = attr.meta.require_name_value()?;
@@ -230,7 +230,7 @@ impl BitfieldStruct {
                 match &attr.meta {
                     syn::Meta::NameValue(name_value) => {
                         let default_value = name_value.value.clone();
-                        config.set_default(default_value, name_value.span())?;
+                        config.default(default_value, name_value.span())?;
                     }
                     meta => {
                         return Err(format_err!(

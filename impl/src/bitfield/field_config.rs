@@ -2,7 +2,7 @@ use super::{config::ConfigValue, raise_skip_error};
 use crate::errors::CombineError;
 use proc_macro2::Span;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct FieldConfig {
     /// Attributes that are re-expanded and going to be ignored by the rest of the `#[bitfield]` invocation.
     pub retained_attrs: Vec<syn::Attribute>,
@@ -50,9 +50,45 @@ impl SkipWhich {
 }
 
 impl FieldConfig {
+    pub fn new() -> Self {
+        Self {
+            retained_attrs: Vec::new(),
+            bits: None,
+            skip: None,
+            default: None,
+        }
+    }
+
     /// Registers the given attribute to be re-expanded and further ignored.
     pub fn retain_attr(&mut self, attr: syn::Attribute) {
         self.retained_attrs.push(attr);
+    }
+
+    /// Generic helper for setting config values that ensures no duplicates.
+    fn set_config<T>(
+        name: &str,
+        config: &mut Option<ConfigValue<T>>,
+        value: T,
+        span: Span,
+    ) -> Result<(), syn::Error> {
+        match config {
+            Some(ref previous) => {
+                Err(format_err!(
+                    span,
+                    "encountered duplicate `#[{} = ...]` attribute for field",
+                    name
+                )
+                .into_combine(format_err!(
+                    previous.span,
+                    "duplicate `#[{} = ...]` here",
+                    name
+                )))
+            }
+            None => {
+                *config = Some(ConfigValue { value, span });
+                Ok(())
+            }
+        }
     }
 
     /// Sets the `#[bits = N]` if found for a `#[bitfield]` annotated field.
@@ -61,22 +97,7 @@ impl FieldConfig {
     ///
     /// If previously already registered a `#[bits = N]`.
     pub fn bits(&mut self, amount: usize, span: Span) -> Result<(), syn::Error> {
-        match self.bits {
-            Some(ref previous) => {
-                return Err(format_err!(
-                    span,
-                    "encountered duplicate `#[bits = N]` attribute for field"
-                )
-                .into_combine(format_err!(previous.span, "duplicate `#[bits = N]` here")))
-            }
-            None => {
-                self.bits = Some(ConfigValue {
-                    value: amount,
-                    span,
-                });
-            }
-        }
-        Ok(())
+        Self::set_config("bits", &mut self.bits, amount, span)
     }
 
     /// Sets the `#[skip(which)]` if found for a `#[bitfield]` annotated field.
@@ -138,27 +159,12 @@ impl FieldConfig {
             .map(|config| &config.span)
     }
 
-    /// Sets the `#[default(...)]` if found for a `#[bitfield]` annotated field.
+    /// Sets the `#[default = ...]` if found for a `#[bitfield]` annotated field.
     ///
     /// # Errors
     ///
-    /// If previously already registered a `#[default(...)]`.
-    pub fn set_default(&mut self, value: syn::Expr, span: Span) -> Result<(), syn::Error> {
-        match self.default {
-            Some(ref previous) => {
-                return Err(format_err!(
-                    span,
-                    "encountered duplicate `#[default(...)]` attribute for field"
-                )
-                .into_combine(format_err!(
-                    previous.span,
-                    "duplicate `#[default(...)]` here"
-                )))
-            }
-            None => {
-                self.default = Some(ConfigValue { value, span });
-            }
-        }
-        Ok(())
+    /// If previously already registered a `#[default = ...]`.
+    pub fn default(&mut self, value: syn::Expr, span: Span) -> Result<(), syn::Error> {
+        Self::set_config("default", &mut self.default, value, span)
     }
 }
