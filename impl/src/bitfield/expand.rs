@@ -186,11 +186,7 @@ impl BitfieldStruct {
         ))
     }
 
-    /// Generates the `Default` implementation for the `#[bitfield]` struct if the
-    /// `#[derive(Default)]` attribute is applied to it.
-    ///
-    /// The implementation calls `Self::new()` which applies any field-level
-    /// `#[default(...)]` attributes and zero-initializes fields without defaults.
+    /// Generates the `Default` impl for the `#[bitfield]` struct.
     pub fn generate_default_impl(&self, config: &Config) -> Option<TokenStream2> {
         config.derive_default.as_ref()?;
         let span = self.item_struct.span();
@@ -372,8 +368,7 @@ impl BitfieldStruct {
         )
     }
 
-    /// Generates the constructor for the bitfield that initializes all bytes to zero
-    /// and applies any default values specified with #[default(...)].
+    /// Generates the constructor for the bitfield.
     fn generate_constructor(&self, config: &Config) -> TokenStream2 {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
