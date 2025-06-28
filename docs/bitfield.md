@@ -215,10 +215,6 @@ assert_eq!(config2.retry_count(), 0);
 assert_eq!(config2.flags(), 0);
 ```
 
-### Limitations
-
-- The `#[default = ...]` attribute cannot be used on fields that skip setter generation
-  (i.e., fields marked with `#[skip]` or `#[skip(setters)]`).
 
 # Features
 
