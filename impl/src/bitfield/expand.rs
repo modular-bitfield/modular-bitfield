@@ -896,15 +896,11 @@ impl BitfieldStruct {
             current_offset = quote! { #current_offset + #field_bits };
         }
 
-        if bit_manipulations.is_empty() {
-            quote_spanned!(span=> [0u8; #byte_count])
-        } else {
-            quote_spanned!(span=> {
-                let mut bytes = [0u8; #byte_count];
-                #( #bit_manipulations )*
-                bytes
-            })
-        }
+        quote_spanned!(span=> {
+            let mut bytes = [0u8; #byte_count];
+            #( #bit_manipulations )*
+            bytes
+        })
     }
 
 }
