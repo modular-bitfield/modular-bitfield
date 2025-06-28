@@ -880,9 +880,8 @@ impl BitfieldStruct {
                     if bits_in_this_byte == 8 && bit_pos == 0 {
                         bytes[byte_idx] = value as u8;
                     } else {
-                        let mask = ((1u8 << bits_in_this_byte) - 1) << bit_pos;
                         let byte_value = (value as u8) << bit_pos;
-                        bytes[byte_idx] = (bytes[byte_idx] & !mask) | byte_value;
+                        bytes[byte_idx] |= byte_value;
                     }
 
                     value >>= bits_in_this_byte;
