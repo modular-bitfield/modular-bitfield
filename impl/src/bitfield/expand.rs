@@ -64,13 +64,14 @@ impl BitfieldStruct {
         let default_impl = if has_defaults {
             let byte_count = quote! { #next_divisible_by_8 / 8usize };
             let default_bytes = self.generate_const_default_bytes(config, &byte_count);
-            
+
             quote! {
-                // Two-path design: Specifier types compute DEFAULT here to avoid 
-                // duplicating bit manipulation logic in the constructor
-                const DEFAULT: Self::Bytes = {
-                    let bytes: [u8; #byte_count] = #default_bytes;
-                    Self::Bytes::from_le_bytes(bytes)
+                #[allow(clippy::semicolon_if_nothing_returned)]
+                {
+                    const DEFAULT: Self::Bytes = {
+                        let bytes: [u8; #byte_count] = #default_bytes;
+                        Self::Bytes::from_le_bytes(bytes)
+                    }
                 };
             }
         } else {
@@ -389,6 +390,7 @@ impl BitfieldStruct {
                         /// Returns an instance with default values applied.
                         #[allow(clippy::identity_op)]
                         #[allow(clippy::new_without_default)]
+                        #[allow(clippy::semicolon_if_nothing_returned)]
                         #[must_use]
                         pub const fn new() -> Self {
                             Self {
@@ -409,12 +411,13 @@ impl BitfieldStruct {
             }
             (true, false) => {
                 let const_bytes_init = self.generate_const_default_bytes(config, &byte_count);
-                
+
                 quote_spanned!(span=>
                     impl #impl_generics #ident #ty_generics #where_clause {
                         /// Returns an instance with default values applied.
                         #[allow(clippy::identity_op)]
                         #[allow(clippy::new_without_default)]
+                        #[allow(clippy::semicolon_if_nothing_returned)]
                         #[must_use]
                         pub const fn new() -> Self {
                             Self {
@@ -854,7 +857,7 @@ impl BitfieldStruct {
                 quote! { <#field_type as ::modular_bitfield::Specifier>::DEFAULT }
             };
 
-            let bit_manipulation = quote_spanned!(span=> {
+            let bit_manipulation = quote_spanned!(span=>
                 let field_offset = #current_offset;
                 let field_value = #const_value;
                 let field_bits = #field_bits;
@@ -872,9 +875,9 @@ impl BitfieldStruct {
                     };
 
                     if bits_in_this_byte == 8 && bit_pos == 0 {
-                        bytes[byte_idx] = value as u8;
+                        bytes[byte_idx] = (value & 0xFF) as u8;
                     } else {
-                        let byte_value = (value as u8) << bit_pos;
+                        let byte_value = ((value & 0xFF) as u8) << bit_pos;
                         bytes[byte_idx] |= byte_value;
                     }
 
@@ -883,17 +886,23 @@ impl BitfieldStruct {
                     byte_idx += 1;
                     bit_pos = 0;
                 }
-            });
+            );
 
             bit_manipulations.push(bit_manipulation);
             current_offset = quote! { #current_offset + #field_bits };
         }
 
-        quote_spanned!(span=> {
-            let mut bytes = [0u8; #byte_count];
-            #( #bit_manipulations )*
-            bytes
-        })
+        if bit_manipulations.is_empty() {
+            quote_spanned!(span=> [0u8; #byte_count])
+        } else {
+            quote_spanned!(span=> {
+                #[allow(clippy::semicolon_if_nothing_returned)]
+                {
+                    let mut bytes = [0u8; #byte_count];
+                    #( #bit_manipulations )*
+                    bytes
+                }
+            })
+        }
     }
-
 }
