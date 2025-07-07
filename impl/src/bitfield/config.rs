@@ -145,7 +145,6 @@ impl Config {
         Ok(())
     }
 
-
     /// Ensures that there are no conflicting configuration parameters.
     pub fn ensure_no_conflicts(&self) -> Result<()> {
         self.ensure_no_bits_and_repr_conflict()?;
@@ -232,12 +231,11 @@ impl Config {
 
     /// Helper function to register derive attributes.
     fn derive_attr(name: &str, field: &mut Option<ConfigValue<()>>, span: Span) -> Result<()> {
-        match field {
-            Some(previous) => Err(Self::raise_duplicate_error(name, span, previous)),
-            None => {
-                *field = Some(ConfigValue::new((), span));
-                Ok(())
-            }
+        if let Some(previous) = field {
+            Err(Self::raise_duplicate_error(name, span, previous))
+        } else {
+            *field = Some(ConfigValue::new((), span));
+            Ok(())
         }
     }
 

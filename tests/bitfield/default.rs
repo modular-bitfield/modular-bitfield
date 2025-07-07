@@ -151,7 +151,7 @@ fn derive_default_trait() {
 
     let default_bf = DeriveDefault::default();
     let new_bf = DeriveDefault::new();
-    
+
     // Default trait should match new()
     assert_eq!(default_bf, new_bf);
     assert!(default_bf.flag());
@@ -176,7 +176,7 @@ fn defaults_with_skip() {
     let bf = SkipDefaults::new();
     assert_eq!(bf.readonly(), 42);
     assert_eq!(bf.data(), 0x7);
-    
+
     // Verify readonly field has no setter
     let bf2 = bf.with_data(0x5);
     assert_eq!(bf2.readonly(), 42); // unchanged
@@ -213,7 +213,7 @@ fn specifier_default_matches_constructor() {
 
     let instance = TestBitfield::new();
     let from_default = TestBitfield::from_bytes(TestBitfield::DEFAULT.to_le_bytes());
-    
+
     assert_eq!(instance.into_bytes(), from_default.into_bytes());
 }
 
