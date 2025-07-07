@@ -118,6 +118,7 @@ fn nested_specifier_defaults() {
 }
 
 #[test]
+#[allow(clippy::wrong_self_convention)]
 fn const_expressions() {
     const DEFAULT_VALUE: u8 = 42;
 
