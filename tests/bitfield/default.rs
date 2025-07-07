@@ -278,9 +278,9 @@ fn max_value_defaults() {
         flag: bool,
         #[default = 0xFF]
         byte: B8,
-        #[default = 0xFFFFFFFFFFFFFFFF]
+        #[default = 0xFFFF_FFFF_FFFF_FFFF]
         large: B64,
-        #[default = 0x123456789ABCDEF0123456789ABCDEF0]
+        #[default = 0x1234_5678_9ABC_DEF0_1234_5678_9ABC_DEF0]
         huge: B128,
     }
 
@@ -289,6 +289,6 @@ fn max_value_defaults() {
     assert_eq!(bf.sixteen_bits(), 0xFFFF);
     assert!(bf.flag());
     assert_eq!(bf.byte(), 0xFF);
-    assert_eq!(bf.large(), 0xFFFFFFFFFFFFFFFF);
-    assert_eq!(bf.huge(), 0x123456789ABCDEF0123456789ABCDEF0);
+    assert_eq!(bf.large(), 0xFFFF_FFFF_FFFF_FFFF);
+    assert_eq!(bf.huge(), 0x1234_5678_9ABC_DEF0_1234_5678_9ABC_DEF0);
 }

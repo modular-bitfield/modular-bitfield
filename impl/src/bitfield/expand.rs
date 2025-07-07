@@ -23,7 +23,8 @@ impl BitfieldStruct {
         let debug_impl = self.generate_debug_impl(config);
         let default_impl = self.generate_default_impl(config);
 
-        quote_spanned!(span=>
+        quote_spanned!(
+            span=>
             #struct_definition
             #check_filled
             #constructor_definition
@@ -66,12 +67,9 @@ impl BitfieldStruct {
             let default_bytes = self.generate_const_default_bytes(config, &byte_count);
 
             quote! {
-                #[allow(clippy::semicolon_if_nothing_returned)]
-                {
-                    const DEFAULT: Self::Bytes = {
-                        let bytes: [u8; #byte_count] = #default_bytes;
-                        Self::Bytes::from_le_bytes(bytes)
-                    }
+                const DEFAULT: Self::Bytes = {
+                    let bytes: [u8; #byte_count] = #default_bytes;
+                    Self::Bytes::from_le_bytes(bytes)
                 };
             }
         } else {
