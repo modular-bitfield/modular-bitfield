@@ -71,23 +71,20 @@ impl FieldConfig {
         value: T,
         span: Span,
     ) -> Result<(), syn::Error> {
-        match config {
-            Some(ref previous) => {
-                Err(format_err!(
-                    span,
-                    "encountered duplicate `#[{} = ...]` attribute for field",
-                    name
-                )
-                .into_combine(format_err!(
-                    previous.span,
-                    "duplicate `#[{} = ...]` here",
-                    name
-                )))
-            }
-            None => {
-                *config = Some(ConfigValue { value, span });
-                Ok(())
-            }
+        if let Some(ref previous) = config {
+            Err(format_err!(
+                span,
+                "encountered duplicate `#[{} = ...]` attribute for field",
+                name
+            )
+            .into_combine(format_err!(
+                previous.span,
+                "duplicate `#[{} = ...]` here",
+                name
+            )))
+        } else {
+            *config = Some(ConfigValue { value, span });
+            Ok(())
         }
     }
 

@@ -23,8 +23,7 @@ impl BitfieldStruct {
         let debug_impl = self.generate_debug_impl(config);
         let default_impl = self.generate_default_impl(config);
 
-        quote_spanned!(
-            span=>
+        quote_spanned!(span=>
             #struct_definition
             #check_filled
             #constructor_definition
@@ -861,6 +860,7 @@ impl BitfieldStruct {
                 let field_bits = #field_bits;
 
                 let mut remaining_bits = field_bits;
+                #[allow(clippy::unnecessary_cast)]
                 let mut value = field_value as u128;
                 let mut byte_idx = field_offset / 8;
                 let mut bit_pos = field_offset % 8;
