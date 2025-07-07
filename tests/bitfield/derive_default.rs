@@ -164,7 +164,7 @@ fn default_preserves_other_derives() {
     // Test that all derives work
     assert_eq!(default_bf, cloned_bf);
     // Test Debug implementation works
-    let _debug_str = format!("{:?}", default_bf);
+    let _debug_str = format!("{default_bf:?}");
 
     // Check values
     assert!(default_bf.flag());
