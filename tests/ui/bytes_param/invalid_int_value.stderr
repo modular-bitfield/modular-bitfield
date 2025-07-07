@@ -2,4 +2,4 @@ error: encountered malformatted integer value for `bytes` parameter: invalid dig
  --> tests/ui/bytes_param/invalid_int_value.rs:4:20
   |
 4 | #[bitfield(bytes = -1)]
-  |                    ^
+  |                    ^^

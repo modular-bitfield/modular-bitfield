@@ -1,8 +1,13 @@
 error[E0277]: the trait bound `SevenMod8: TotalSizeIsMultipleOfEightBits` is not satisfied
   --> tests/ui/multiple_of_8bits.rs:54:1
    |
-54 | pub struct NotQuiteFourBytes {
-   | ^^^ the trait `TotalSizeIsMultipleOfEightBits` is not implemented for `SevenMod8`
+54 | / pub struct NotQuiteFourBytes {
+55 | |     a: A,
+56 | |     b: B,
+57 | |     c: C,
+58 | |     d: D,
+59 | | }
+   | |_^ the trait `TotalSizeIsMultipleOfEightBits` is not implemented for `SevenMod8`
    |
    = help: the trait `TotalSizeIsMultipleOfEightBits` is implemented for `ZeroMod8`
 note: required by a bound in `CheckTotalSizeMultipleOf8`
@@ -20,8 +25,13 @@ note: required by a bound in `CheckTotalSizeMultipleOf8`
 error[E0277]: the trait bound `SevenMod8: TotalSizeIsMultipleOfEightBits` is not satisfied
   --> tests/ui/multiple_of_8bits.rs:54:1
    |
-54 | pub struct NotQuiteFourBytes {
-   | ^^^ the trait `TotalSizeIsMultipleOfEightBits` is not implemented for `SevenMod8`
+54 | / pub struct NotQuiteFourBytes {
+55 | |     a: A,
+56 | |     b: B,
+57 | |     c: C,
+58 | |     d: D,
+59 | | }
+   | |_^ the trait `TotalSizeIsMultipleOfEightBits` is not implemented for `SevenMod8`
    |
    = help: the trait `TotalSizeIsMultipleOfEightBits` is implemented for `ZeroMod8`
 note: required by a bound in `CheckTotalSizeMultipleOf8::Size`

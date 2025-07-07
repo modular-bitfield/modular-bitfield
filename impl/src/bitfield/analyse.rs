@@ -105,6 +105,8 @@ impl BitfieldStruct {
             let path = &meta.path;
             if path.is_ident("Debug") {
                 config.derive_debug(path.span())?;
+            } else if path.is_ident("Default") {
+                config.derive_default(path.span())?;
             } else if path.is_ident("BitfieldSpecifier") {
                 config.deprecated_specifier(path.span());
                 config.derive_specifier(path.span())?;
@@ -163,7 +165,7 @@ impl BitfieldStruct {
 
     /// Extracts the `#[bits = N]` and `#[skip(..)]` attributes for a given field.
     fn extract_field_config(field: &syn::Field) -> Result<FieldConfig> {
-        let mut config = FieldConfig::default();
+        let mut config = FieldConfig::new();
         for attr in &field.attrs {
             if attr.path().is_ident("bits") {
                 let name_value = attr.meta.require_name_value()?;
@@ -221,6 +223,19 @@ impl BitfieldStruct {
                         return Err(format_err!(
                             meta.span(),
                             "encountered invalid format for #[skip] field attribute"
+                        ))
+                    }
+                }
+            } else if attr.path().is_ident("default") {
+                match &attr.meta {
+                    syn::Meta::NameValue(name_value) => {
+                        let default_value = name_value.value.clone();
+                        config.default(default_value, name_value.span())?;
+                    }
+                    meta => {
+                        return Err(format_err!(
+                            meta.span(),
+                            "encountered invalid format for #[default] field attribute, expected #[default = expression]"
                         ))
                     }
                 }

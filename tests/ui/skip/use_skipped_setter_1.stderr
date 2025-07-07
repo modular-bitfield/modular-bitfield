@@ -3,7 +3,7 @@ error[E0599]: no method named `set_unused_1` found for struct `Sparse` in the cu
    |
 4  | / #[derive(Debug)]
 5  | | pub struct Sparse {
-   | |___- method `set_unused_1` not found for this struct
+   | |_________________- method `set_unused_1` not found for this struct
 ...
 14 |       sparse.set_unused_1(0b11_1111_1111); // ERROR!
    |              ^^^^^^^^^^^^
@@ -11,5 +11,6 @@ error[E0599]: no method named `set_unused_1` found for struct `Sparse` in the cu
 help: there is a method `unused_1` with a similar name, but with different arguments
   --> tests/ui/skip/use_skipped_setter_1.rs:6:5
    |
-6  |     #[skip(setters)]
-   |     ^
+6  | /     #[skip(setters)]
+7  | |     unused_1: B7,
+   | |________________^

@@ -123,6 +123,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
 
         impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
             const BITS: usize = #bits;
+            const DEFAULT: Self::Bytes = 0;
             type Bytes = <[(); #bits] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
             type InOut = Self;
 

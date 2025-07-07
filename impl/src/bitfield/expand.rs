@@ -21,6 +21,7 @@ impl BitfieldStruct {
         let bytes_check = self.expand_optional_bytes_check(config);
         let repr_impls_and_checks = self.expand_repr_from_impls_and_checks(config);
         let debug_impl = self.generate_debug_impl(config);
+        let default_impl = self.generate_default_impl(config);
 
         quote_spanned!(span=>
             #struct_definition
@@ -32,6 +33,7 @@ impl BitfieldStruct {
             #bytes_check
             #repr_impls_and_checks
             #debug_impl
+            #default_impl
         )
     }
 
@@ -55,6 +57,26 @@ impl BitfieldStruct {
             };)
         });
 
+        let has_defaults = self
+            .field_infos(config)
+            .any(|info| info.config.default.is_some());
+
+        let default_impl = if has_defaults {
+            let byte_count = quote! { #next_divisible_by_8 / 8usize };
+            let default_bytes = self.generate_const_default_bytes(config, &byte_count);
+
+            quote! {
+                const DEFAULT: Self::Bytes = {
+                    let bytes: [u8; #byte_count] = #default_bytes;
+                    Self::Bytes::from_le_bytes(bytes)
+                };
+            }
+        } else {
+            quote! {
+                const DEFAULT: Self::Bytes = 0;
+            }
+        };
+
         Some(quote_spanned!(span=>
             #deprecation_warning
 
@@ -68,6 +90,7 @@ impl BitfieldStruct {
             #[allow(clippy::identity_op)]
             impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
                 const BITS: usize = #bits;
+                #default_impl
 
                 type Bytes = <[(); if #bits > 128 { 128 } else { #bits }] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
                 type InOut = Self;
@@ -123,7 +146,7 @@ impl BitfieldStruct {
                 field,
                 config,
             } = &info;
-            if config.skip_getters() {
+            if config.skip_getters().is_some() {
                 return None;
             }
             let field_span = field.span();
@@ -156,6 +179,22 @@ impl BitfieldStruct {
                     __bf_f.#builder_name(::core::stringify!(#ident))
                         #( #fields )*
                         .finish()
+                }
+            }
+        ))
+    }
+
+    /// Generates the `Default` impl for the `#[bitfield]` struct.
+    pub fn generate_default_impl(&self, config: &Config) -> Option<TokenStream2> {
+        config.derive_default.as_ref()?;
+        let span = self.item_struct.span();
+        let ident = &self.item_struct.ident;
+        let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+
+        Some(quote_spanned!(span=>
+            impl #impl_generics ::core::default::Default for #ident #ty_generics #where_clause {
+                fn default() -> Self {
+                    Self::new()
                 }
             }
         ))
@@ -327,27 +366,89 @@ impl BitfieldStruct {
         )
     }
 
-    /// Generates the constructor for the bitfield that initializes all bytes to zero.
+    /// Generates the constructor for the bitfield.
     fn generate_constructor(&self, config: &Config) -> TokenStream2 {
         let span = self.item_struct.span();
         let ident = &self.item_struct.ident;
         let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
         let size = self.generate_target_or_actual_bitfield_size(config);
         let next_divisible_by_8 = Self::next_divisible_by_8(&size);
-        quote_spanned!(span=>
-            impl #impl_generics #ident #ty_generics #where_clause
-            {
-                /// Returns an instance with zero initialized data.
-                #[allow(clippy::identity_op)]
-                #[allow(clippy::new_without_default)]
-                #[must_use]
-                pub const fn new() -> Self {
-                    Self {
-                        bytes: [0u8; #next_divisible_by_8 / 8usize],
+        let byte_count = quote_spanned!(span=> #next_divisible_by_8 / 8usize);
+
+        let has_defaults = self
+            .field_infos(config)
+            .any(|info| info.config.default.is_some());
+        let derives_specifier = config.derive_specifier.is_some();
+
+        match (has_defaults, derives_specifier) {
+            (true, true) => {
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with default values applied.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[allow(clippy::semicolon_if_nothing_returned)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: <Self as ::modular_bitfield::Specifier>::DEFAULT.to_le_bytes()
+                            }
+                        }
+
+                        /// Returns an instance with all bits initialized to zero.
+                        #[allow(clippy::identity_op)]
+                        #[must_use]
+                        pub const fn new_zeroed() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
+                        }
                     }
-                }
+                )
             }
-        )
+            (true, false) => {
+                let const_bytes_init = self.generate_const_default_bytes(config, &byte_count);
+
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with default values applied.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[allow(clippy::semicolon_if_nothing_returned)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: #const_bytes_init
+                            }
+                        }
+
+                        /// Returns an instance with all bits initialized to zero.
+                        #[allow(clippy::identity_op)]
+                        #[must_use]
+                        pub const fn new_zeroed() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
+                        }
+                    }
+                )
+            }
+            (false, _) => {
+                quote_spanned!(span=>
+                    impl #impl_generics #ident #ty_generics #where_clause {
+                        /// Returns an instance with zero initialized data.
+                        #[allow(clippy::identity_op)]
+                        #[allow(clippy::new_without_default)]
+                        #[must_use]
+                        pub const fn new() -> Self {
+                            Self {
+                                bytes: [0u8; #byte_count]
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 
     /// Generates the compile-time assertion if the optional `byte` parameter has been set.
@@ -514,7 +615,7 @@ impl BitfieldStruct {
             field,
             config,
         } = info;
-        if config.skip_getters() {
+        if config.skip_getters().is_some() {
             return None;
         }
         let struct_ident = &self.item_struct.ident;
@@ -580,7 +681,7 @@ impl BitfieldStruct {
             field,
             config,
         } = info;
-        if config.skip_setters() {
+        if config.skip_setters().is_some() {
             return None;
         }
         let struct_ident = &self.item_struct.ident;
@@ -724,5 +825,82 @@ impl BitfieldStruct {
                 #( #setters_and_getters )*
             }
         )
+    }
+
+    /// Generates a const expression that creates a byte array with default values applied.
+    /// This uses const-compatible bit manipulation to set default values at compile time.
+    fn generate_const_default_bytes(
+        &self,
+        config: &Config,
+        byte_count: &TokenStream2,
+    ) -> TokenStream2 {
+        let span = self.item_struct.span();
+
+        let mut bit_manipulations = Vec::new();
+        let mut current_offset = quote! { 0usize };
+
+        for info in self.field_infos(config) {
+            let field_type = &info.field.ty;
+            let field_bits = quote! { <#field_type as ::modular_bitfield::Specifier>::BITS };
+
+            let field_config = &info.config;
+            let const_value = if let Some(default_config) = &field_config.default {
+                let default_value = &default_config.value;
+                let span = default_config.span;
+                quote_spanned!(span=> {
+                    #default_value as <#field_type as ::modular_bitfield::Specifier>::Bytes
+                })
+            } else {
+                quote! { <#field_type as ::modular_bitfield::Specifier>::DEFAULT }
+            };
+
+            let bit_manipulation = quote_spanned!(span=>
+                let field_offset = #current_offset;
+                let field_value = #const_value;
+                let field_bits = #field_bits;
+
+                let mut remaining_bits = field_bits;
+                #[allow(clippy::unnecessary_cast)]
+                let mut value = field_value as u128;
+                let mut byte_idx = field_offset / 8;
+                let mut bit_pos = field_offset % 8;
+
+                while remaining_bits > 0 {
+                    let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
+                        remaining_bits
+                    } else {
+                        8 - bit_pos
+                    };
+
+                    if bits_in_this_byte == 8 && bit_pos == 0 {
+                        bytes[byte_idx] = (value & 0xFF) as u8;
+                    } else {
+                        let byte_value = ((value & 0xFF) as u8) << bit_pos;
+                        bytes[byte_idx] |= byte_value;
+                    }
+
+                    value >>= bits_in_this_byte;
+                    remaining_bits -= bits_in_this_byte;
+                    byte_idx += 1;
+                    bit_pos = 0;
+                }
+            );
+
+            bit_manipulations.push(bit_manipulation);
+            current_offset = quote! { #current_offset + #field_bits };
+        }
+
+        if bit_manipulations.is_empty() {
+            quote_spanned!(span=> [0u8; #byte_count])
+        } else {
+            quote_spanned!(span=> {
+                #[allow(clippy::semicolon_if_nothing_returned)]
+                {
+                    let mut bytes = [0u8; #byte_count];
+                    #( #bit_manipulations )*
+                    bytes
+                }
+            })
+        }
     }
 }

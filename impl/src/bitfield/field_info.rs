@@ -63,7 +63,7 @@ impl BitfieldStruct {
                 .get(&n)
                 .map(|config| &config.value)
                 .cloned()
-                .unwrap_or_default();
+                .unwrap_or_else(FieldConfig::new);
             FieldInfo::new(n, field, field_config)
         })
     }

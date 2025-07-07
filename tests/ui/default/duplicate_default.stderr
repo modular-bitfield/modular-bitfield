@@ -1,0 +1,11 @@
+error: encountered duplicate `#[default = ...]` attribute for field
+ --> tests/ui/default/duplicate_default.rs:6:7
+  |
+6 |     #[default = false]
+  |       ^^^^^^^^^^^^^^^
+
+error: duplicate `#[default = ...]` here
+ --> tests/ui/default/duplicate_default.rs:5:7
+  |
+5 |     #[default = true]
+  |       ^^^^^^^^^^^^^^

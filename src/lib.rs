@@ -39,6 +39,12 @@ pub trait Specifier {
     /// The amount of bits used by the specifier.
     const BITS: usize;
 
+    /// The default value for this specifier type.
+    ///
+    /// This is used when constructing parent bitfields to properly initialize
+    /// fields that have their own defaults.
+    const DEFAULT: Self::Bytes;
+
     /// The base type of the specifier.
     ///
     /// # Note

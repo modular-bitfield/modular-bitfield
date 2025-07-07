@@ -8,4 +8,4 @@ error: encountered invalid format for #[skip] field attribute
   --> tests/ui/skip/invalid_specifier.rs:17:7
    |
 17 |     #[skip = 1]
-   |       ^^^^
+   |       ^^^^^^^^

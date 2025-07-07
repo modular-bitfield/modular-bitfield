@@ -1,8 +1,12 @@
 error[E0277]: the trait bound `False: SpecifierHasAtMost128Bits` is not satisfied
  --> tests/ui/derive_specifier/out_of_bounds.rs:4:1
   |
-4 | #[derive(Specifier, Debug)]
-  | ^ the trait `SpecifierHasAtMost128Bits` is not implemented for `False`
+4 | / #[derive(Specifier, Debug)]
+5 | | pub struct Header {
+6 | |     a: B1,
+7 | |     b: B128,
+8 | | }
+  | |_^ the trait `SpecifierHasAtMost128Bits` is not implemented for `False`
   |
   = help: the trait `SpecifierHasAtMost128Bits` is implemented for `True`
 note: required by a bound in `CheckSpecifierHasAtMost128Bits`
@@ -20,8 +24,12 @@ note: required by a bound in `CheckSpecifierHasAtMost128Bits`
 error[E0277]: the trait bound `False: SpecifierHasAtMost128Bits` is not satisfied
  --> tests/ui/derive_specifier/out_of_bounds.rs:4:1
   |
-4 | #[derive(Specifier, Debug)]
-  | ^ the trait `SpecifierHasAtMost128Bits` is not implemented for `False`
+4 | / #[derive(Specifier, Debug)]
+5 | | pub struct Header {
+6 | |     a: B1,
+7 | |     b: B128,
+8 | | }
+  | |_^ the trait `SpecifierHasAtMost128Bits` is not implemented for `False`
   |
   = help: the trait `SpecifierHasAtMost128Bits` is implemented for `True`
 note: required by a bound in `CheckSpecifierHasAtMost128Bits::CheckType`
@@ -36,8 +44,12 @@ note: required by a bound in `CheckSpecifierHasAtMost128Bits::CheckType`
 error[E0277]: the trait bound `[(); 136]: ArrayBytesConversion` is not satisfied
  --> tests/ui/derive_specifier/out_of_bounds.rs:4:1
   |
-4 | #[derive(Specifier, Debug)]
-  | ^ the trait `ArrayBytesConversion` is not implemented for `[(); 136]`
+4 | / #[derive(Specifier, Debug)]
+5 | | pub struct Header {
+6 | |     a: B1,
+7 | |     b: B128,
+8 | | }
+  | |_^ the trait `ArrayBytesConversion` is not implemented for `[(); 136]`
   |
   = help: the following other types implement trait `ArrayBytesConversion`:
             [(); 104]

@@ -1,0 +1,5 @@
+error: encountered invalid format for #[default] field attribute, expected #[default = expression]
+ --> tests/ui/default/non_const_default.rs:9:7
+  |
+9 |     #[default(get_value())]  // Function call not allowed in const context
+  |       ^^^^^^^^^^^^^^^^^^^^

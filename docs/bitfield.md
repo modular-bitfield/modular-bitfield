@@ -6,9 +6,12 @@ By default this generates the following API:
 
 - **Constructors:**
 
-    1. `new()`: Initializes all bits to 0 even if 0 bits may be invalid.
-       Note that invalid bit patterns are supported in that getters and setters will
-       be protecting accesses.
+    All constructors are `const fn`, allowing bitfield instances to be created in const contexts such as static variables or const expressions.
+
+    1. `new()`: When any field has a `#[default = ...]` attribute, this applies the specified
+       default values. When no defaults are specified, initializes all bits to 0.
+    2. `new_zeroed()`: Generated when any field has a `#[default = ...]` attribute.
+       Always initializes all bits to 0, ignoring any default values.
 
 - **Getters:**
 
@@ -178,6 +181,41 @@ pub struct Sparse {
 }
 ```
 
+## Field Parameter: `#[default = ...]`
+
+The `#[default = ...]` attribute allows you to specify a default value for a field.
+When using this attribute, the `new()` constructor applies the specified default values,
+and an additional `new_zeroed()` constructor is generated for explicit zero initialization.
+
+### Example
+
+```
+# use modular_bitfield::prelude::*;
+#[bitfield]
+pub struct Config {
+    enabled: bool,
+    #[default = true]
+    auto_restart: bool,
+    #[default = 5]
+    retry_count: B6,
+    #[default = 0xFF]
+    flags: B8,
+}
+
+// Create with default values applied
+let config1 = Config::new();
+assert_eq!(config1.auto_restart(), true);
+assert_eq!(config1.retry_count(), 5);
+assert_eq!(config1.flags(), 0xFF);
+
+// Create with all zeros
+let config2 = Config::new_zeroed();
+assert_eq!(config2.auto_restart(), false);
+assert_eq!(config2.retry_count(), 0);
+assert_eq!(config2.flags(), 0);
+```
+
+
 # Features
 
 ## Support: `#[derive(Specifier)]`
@@ -218,6 +256,34 @@ pub struct Base {
     header: Header, //  4 bits
     content: B28,   // 28 bits
 }
+```
+
+## Support: `#[derive(Default)]`
+
+If a `#[derive(Default)]` is found by the `#[bitfield]` an implementation of `Default`
+is generated for the bitfield struct. The generated implementation will respect any
+`#[default = ...]` attributes on fields.
+
+### Example
+
+```
+# use modular_bitfield::prelude::*;
+#[bitfield]
+#[derive(Default)]
+pub struct Config {
+    enabled: bool,
+    #[default = true]
+    auto_restart: bool,
+    #[default = 5]
+    retry_count: B6,
+    flags: B8,
+}
+
+let config = Config::default();
+assert_eq!(config.enabled(), false);
+assert_eq!(config.auto_restart(), true);
+assert_eq!(config.retry_count(), 5);
+assert_eq!(config.flags(), 0);
 ```
 
 ## Support: `#[derive(Debug)]`

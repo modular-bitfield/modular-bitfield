@@ -13,6 +13,7 @@ pub struct Config {
     pub filled: Option<ConfigValue<bool>>,
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
+    pub derive_default: Option<ConfigValue<()>>,
     pub derive_specifier: Option<ConfigValue<()>>,
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
@@ -228,23 +229,32 @@ impl Config {
         Ok(())
     }
 
+    /// Helper function to register derive attributes.
+    fn derive_attr(name: &str, field: &mut Option<ConfigValue<()>>, span: Span) -> Result<()> {
+        if let Some(previous) = field {
+            Err(Self::raise_duplicate_error(name, span, previous))
+        } else {
+            *field = Some(ConfigValue::new((), span));
+            Ok(())
+        }
+    }
+
     /// Registers the `#[derive(Debug)]` attribute for the #[bitfield] macro.
     ///
     /// # Errors
     ///
     /// If a `#[derive(Debug)]` attribute has already been found.
     pub fn derive_debug(&mut self, span: Span) -> Result<()> {
-        match &self.derive_debug {
-            Some(previous) => {
-                return Err(Self::raise_duplicate_error(
-                    "#[derive(Debug)]",
-                    span,
-                    previous,
-                ))
-            }
-            None => self.derive_debug = Some(ConfigValue::new((), span)),
-        }
-        Ok(())
+        Self::derive_attr("#[derive(Debug)]", &mut self.derive_debug, span)
+    }
+
+    /// Registers the `#[derive(Default)]` attribute for the #[bitfield] macro.
+    ///
+    /// # Errors
+    ///
+    /// If a `#[derive(Default)]` attribute has already been found.
+    pub fn derive_default(&mut self, span: Span) -> Result<()> {
+        Self::derive_attr("#[derive(Default)]", &mut self.derive_default, span)
     }
 
     /// Registers the `#[derive(Specifier)]` attribute for the #[bitfield] macro.
@@ -253,17 +263,7 @@ impl Config {
     ///
     /// If a `#[derive(Specifier)]` attribute has already been found.
     pub fn derive_specifier(&mut self, span: Span) -> Result<()> {
-        match &self.derive_specifier {
-            Some(previous) => {
-                return Err(Self::raise_duplicate_error(
-                    "#[derive(Specifier)]",
-                    span,
-                    previous,
-                ))
-            }
-            None => self.derive_specifier = Some(ConfigValue::new((), span)),
-        }
-        Ok(())
+        Self::derive_attr("#[derive(Specifier)]", &mut self.derive_specifier, span)
     }
 
     /// Tell codegen to raise a warning about use of the deprecated

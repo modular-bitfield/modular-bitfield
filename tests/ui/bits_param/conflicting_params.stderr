@@ -10,10 +10,10 @@ error: conflicting `bits = 16` here
  --> tests/ui/bits_param/conflicting_params.rs:3:12
   |
 3 | #[bitfield(bits = 16, bytes = 4)]
-  |            ^^^^
+  |            ^^^^^^^^^
 
 error: conflicting `bytes = 4` here
  --> tests/ui/bits_param/conflicting_params.rs:3:23
   |
 3 | #[bitfield(bits = 16, bytes = 4)]
-  |                       ^^^^^
+  |                       ^^^^^^^^^

@@ -114,8 +114,8 @@ fn enums() {
 fn name_conflict() {
     #[derive(Specifier)]
     pub enum SuspiciouslyAmbiguous {
-        Bytes,
-        InOut,
+        BytesVariant,
+        InOutVariant,
     }
 }
 

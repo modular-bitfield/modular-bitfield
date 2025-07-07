@@ -1,0 +1,12 @@
+error[E0600]: cannot apply unary operator `-` to type `u8`
+ --> tests/ui/default/bit_overflow.rs:5:17
+  |
+5 |     #[default = -1]    // Negative value should fail
+  |                 ^^ cannot apply unary operator `-`
+  |
+  = note: unsigned values cannot be negated
+help: you may have meant the maximum value of `u8`
+  |
+5 -     #[default = -1]    // Negative value should fail
+5 +     #[u8::MAX]    // Negative value should fail
+  |
