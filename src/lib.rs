@@ -27,26 +27,28 @@ pub mod prelude {
 ///
 /// For example:
 ///
-/// * The `Specifier` for `bool` converts between a `u8` with a 1 or 0 bit in
-///   the lowest bit position and a native `bool` type.
-/// * The `Specifier` for a unit enum with variants `{0, 1, 14}` converts
+/// * The specifier for `bool` converts between a `u8` with a 1 or 0 bit in
+///   the lowest bit position and a native `bool`.
+/// * The specifier for a unit enum with variants `{0, 1, 14}` converts
 ///   between a `u16` matching those variants and the enum type.
-/// * The `Specifier` for a 20-bit struct converts between a `u32` and the
+/// * The specifier for a 20-bit struct converts between a `u32` and the
 ///   struct type.
 ///
-/// This trait should usually only be implemented by `#[derive(Specifier)]`.
+/// All types used in a `#[bitfield]` struct must implement this trait, and it
+/// should usually only be implemented with
+/// [`#[derive(Specifier)]`](macro@crate::Specifier).
 pub trait Specifier {
     /// The number of bits used by the `Specifier`.
     const BITS: usize;
 
     /// The storage type. This is typically the smallest integer primitive that
-    /// can store all possible values of the [`InOut`] type.
+    /// can store all possible values of the [`InOut`](Self::InOut) type.
     type Bytes;
 
     /// The interface type. This type is used by getters and setters. For
-    /// integers, this is the same as the [`Bytes`] type; for other types with
-    /// more logical representations, like an enum or struct, this is the enum
-    /// or struct.
+    /// integers, this is the same as the [`Bytes`](Self::Bytes) type; for other
+    /// types with more logical representations, like an enum or struct, this is
+    /// the enum or struct.
     type InOut;
 
     /// Converts an interface type into its storage type.

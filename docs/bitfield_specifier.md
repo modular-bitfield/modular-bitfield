@@ -1,33 +1,35 @@
-Derive macro for Rust `enums` to implement `Specifier` trait.
+Derive macro generating an impl of the trait [`Specifier`].
 
-This allows such an enum to be used as a field of a `#[bitfield]` struct.
-The annotated enum must not have any variants with associated data and
-by default must have a number of variants that is equal to the power of 2.
+This macro can be used on all unit enums and structs annotated with
+`#[bitfield]`. The enum or struct can be up to 128 bits in size; anything larger
+will cause a compilation error.
 
-If a user wants to circumvent the latter restriction they can add
-`#[bits = N]` below the `#[derive(Specifier)]` line in order to
-signal to the code generation that the enum may have a relaxed number
-of variants.
+# Options
 
-# Example
+* `#[bits = N]`: Explicitly specifies the number of bits used by a unit enum.
+  This attribute is required when an enum does not have a power-of-two number of
+  variants, but can be used for extra validation no matter what.
 
-## Example: Basic Usage
+# Examples
 
-In the following we define a `MaybeWeekday` enum that lists all weekdays
-as well as an invalid day so that we have a power-of-two number of variants.
+## Basic usage
+
+In this example, an extra variant (`Invalid`) is required because otherwise the
+enum would not contain a power-of-two number of variants. The power-of-two
+requirement ensures conversion from raw bits is infallible.
 
 ```
 use modular_bitfield::prelude::*;
 
 #[derive(Specifier)]
 pub enum Weekday {
-    Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, None
+    Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, Invalid
 }
 ```
 
-## Example: `#[bits = N]`
+## Using `#[bits = N]`
 
-If we want to get rid of the `None` variant we need to add `#[bits = 3]`:
+To eliminate the power-of-two requirement, add the `#[bits]` attribute:
 
 ```
 # use modular_bitfield::prelude::*;
@@ -39,10 +41,9 @@ pub enum Weekday {
 }
 ```
 
-## Example: Discriminants
+## Discriminants
 
-It is possible to explicitly assign discriminants to some of the days.
-In our case this is useful since our week starts at sunday:
+Discriminants can be used normally to explicitly override certain values:
 
 ```
 # use modular_bitfield::prelude::*;
@@ -51,33 +52,27 @@ In our case this is useful since our week starts at sunday:
 #[bits = 3]
 pub enum Weekday {
     Monday = 1,
-    Tuesday = 2,
-    Wednesday = 3,
-    Thursday = 4,
-    Friday = 5,
-    Saturday = 6,
+    Tuesday /* 2 … */,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
     Sunday = 0,
 }
 ```
 
-## Example: Use in `#[bitfield]`
+## With `#[bitfield]`
 
-Given the above `Weekday` enum that starts at `Sunday` and uses 3 bits in total
-we can now use it in a `#[bitfield]` annotated struct as follows:
+An enum that implements `Specifier` can be used normally as a field type in a
+`#[bitfield]` struct:
 
 ```
 # use modular_bitfield::prelude::*;
 #
-# #[derive(Specifier)]
+# #[derive(Debug, Eq, PartialEq, Specifier)]
 # #[bits = 3]
 # pub enum Weekday {
-#     Monday = 1,
-#     Tuesday = 2,
-#     Wednesday = 3,
-#     Thursday = 4,
-#     Friday = 5,
-#     Saturday = 6,
-#     Sunday = 0,
+#     Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
 # }
 #[bitfield]
 pub struct MeetingTimeSlot {
@@ -86,43 +81,11 @@ pub struct MeetingTimeSlot {
     to: B6,
     expired: bool,
 }
-```
 
-The above `MeetingTimeSlot` uses exactly 16 bits and defines our `Weekday` enum as
-compact `day` bitfield. The `from` and `to` require 6 bits each and finally the
-`expired` flag requires a single bit.
-
-## Example: Interacting
-
-A user can interact with the above `MeetingTimeSlot` and `Weekday` definitions in
-the following ways:
-
-```
-# use modular_bitfield::prelude::*;
-#
-# #[derive(Specifier, Debug, PartialEq)]
-# #[bits = 3]
-# pub enum Weekday {
-#     Monday = 1,
-#     Tuesday = 2,
-#     Wednesday = 3,
-#     Thursday = 4,
-#     Friday = 5,
-#     Saturday = 6,
-#     Sunday = 0,
-# }
-# #[bitfield]
-# pub struct MeetingTimeSlot {
-#     day: Weekday,
-#     from: B6,
-#     to: B6,
-#     expired: bool,
-# }
-#
 let mut slot = MeetingTimeSlot::new()
     .with_day(Weekday::Friday)
-    .with_from(14) // 14:00 CEST
-    .with_to(15); // 15:00 CEST
+    .with_from(14) // 14:00
+    .with_to(15); // 15:00
 assert_eq!(slot.day(), Weekday::Friday);
 assert_eq!(slot.from(), 14);
 assert_eq!(slot.to(), 15);
