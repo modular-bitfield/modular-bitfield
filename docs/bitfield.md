@@ -227,6 +227,16 @@ is going to be generated that clearly displays all the fields and their values a
 would expect.
 Also invalid bit patterns for fields are clearly displayed under this implementation.
 
+## Support: `#[derive(uDebug)]`
+Requires the `ufmt` feature.
+
+If a `#[derive(uDebug)]` is found by the `#[bitfield]` a naturally formatting implementation
+is going to be generated that clearly displays all the fields and their values as the user
+would expect.
+Also invalid bit patterns for fields are clearly displayed under this implementation.
+
+This behaves the same as `#[derive(Debug)]` regarding the output, but implements `ufmt::uDebug` of the [ufmt](https://docs.rs/ufmt/latest) crate.
+
 ### Example
 
 ```

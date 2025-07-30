@@ -105,6 +105,9 @@ impl BitfieldStruct {
             let path = &meta.path;
             if path.is_ident("Debug") {
                 config.derive_debug(path.span())?;
+            } else if path.is_ident("uDebug") {
+                #[cfg(feature = "ufmt")]
+                config.derive_udebug(path.span())?;
             } else if path.is_ident("BitfieldSpecifier") {
                 config.deprecated_specifier(path.span());
                 config.derive_specifier(path.span())?;

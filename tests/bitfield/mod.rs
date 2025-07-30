@@ -2,6 +2,8 @@ mod bits_param;
 mod bytes_param;
 mod derive_bitfield_specifier;
 mod derive_debug;
+#[cfg(feature = "ufmt")]
+mod derive_udebug;
 mod derive_specifier;
 mod filled_param;
 mod no_implicit_prelude;

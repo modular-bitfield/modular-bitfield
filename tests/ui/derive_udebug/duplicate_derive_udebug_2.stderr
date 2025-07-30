@@ -1,0 +1,11 @@
+error: encountered duplicate `#[derive(uDebug)]` parameter
+ --> tests/ui/derive_udebug/duplicate_derive_udebug_2.rs:4:18
+  |
+4 | #[derive(uDebug, uDebug)]
+  |                  ^^^^^^
+
+error: previous `#[derive(uDebug)]` parameter here
+ --> tests/ui/derive_udebug/duplicate_derive_udebug_2.rs:4:10
+  |
+4 | #[derive(uDebug, uDebug)]
+  |          ^^^^^^

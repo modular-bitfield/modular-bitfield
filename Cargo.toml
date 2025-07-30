@@ -33,11 +33,18 @@ version.workspace = true
 [dependencies]
 modular-bitfield-impl = { path = "impl", version = "0.13.0-pre" }
 static_assertions = "1.1"
+ufmt = { version = "0.2.0", default-features = false, optional = true }
 
 [dev-dependencies]
 bitfield = "0.19"
 tiny-bench = "0.4"
 trybuild = "1.0"
+ufmt = { version = "0.2.0", default-features = false }
+
+[features]
+# Add support for `#[derive(uDebug)]` from [ufmt](https://docs.rs/ufmt/latest)
+ufmt = ["modular-bitfield-impl/ufmt", "dep:ufmt"]
+default = []
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
