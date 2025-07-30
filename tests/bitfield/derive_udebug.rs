@@ -1,6 +1,6 @@
 #![cfg(feature = "ufmt")]
 
-//! Tests for `#[derive(Debug)]`
+//! Tests for `#[derive(uDebug)]`
 
 extern crate alloc;
 use core::fmt::Write;
@@ -31,6 +31,7 @@ impl<'s> PartialEq<&'s str> for AllocString {
     }
 }
 
+/// Wrapper for ufmt's uwrite!() macro to return an AllocString, analogous to the format!() macro.
 macro_rules! ufmt_format_wrapper {
     ($($tt:tt)*) => {{
         let mut s = AllocString::new();
