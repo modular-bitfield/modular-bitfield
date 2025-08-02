@@ -3,7 +3,7 @@ use super::{
     field_info::FieldInfo,
     BitfieldStruct,
 };
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{self, punctuated::Punctuated, spanned::Spanned as _, Token};
 
@@ -21,6 +21,12 @@ impl BitfieldStruct {
         let bytes_check = self.expand_optional_bytes_check(config);
         let repr_impls_and_checks = self.expand_repr_from_impls_and_checks(config);
         let debug_impl = self.generate_debug_impl(config);
+        let udebug_impl =  {
+            #[cfg(feature = "ufmt")]
+            { self.generate_udebug_impl(config) }
+            #[cfg(not(feature = "ufmt"))]
+            { Option::<TokenStream2>::None }
+        };
 
         quote_spanned!(span=>
             #struct_definition
@@ -32,6 +38,7 @@ impl BitfieldStruct {
             #bytes_check
             #repr_impls_and_checks
             #debug_impl
+            #udebug_impl
         )
     }
 
@@ -154,6 +161,65 @@ impl BitfieldStruct {
             impl #impl_generics ::core::fmt::Debug for #ident #ty_generics #where_clause {
                 fn fmt(&self, __bf_f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                     __bf_f.#builder_name(::core::stringify!(#ident))
+                        #( #fields )*
+                        .finish()
+                }
+            }
+        ))
+    }
+
+    /// Generates the `ufmt::Debug` impl if `#[derive(uDebug)]` is included.
+    #[cfg(feature = "ufmt")]
+    pub fn generate_udebug_impl(&self, config: &Config) -> Option<TokenStream2> {
+        config.derive_udebug.as_ref()?;
+        let span = self.item_struct.span();
+        let ident = &self.item_struct.ident;
+        let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+        let is_tuple = matches!(self.item_struct.fields, syn::Fields::Unnamed(_));
+        let builder_name = if is_tuple {
+            quote_spanned!(span=> debug_tuple)
+        } else {
+            quote_spanned!(span=> debug_struct)
+        };
+        let fields = self.field_infos(config).map(|info| {
+            let FieldInfo {
+                index: _,
+                field,
+                config,
+            } = &info;
+            if config.skip_getters() {
+                return None;
+            }
+            let field_span = field.span();
+            let field_name = if field.ident.is_some() {
+                let field_name = info.name();
+                quote_spanned!(field_span=> #field_name,)
+            } else {
+                <_>::default()
+            };
+            let field_ident = info.ident_frag();
+            let field_getter = field.ident.as_ref().map_or_else(
+                || format_ident!("get_{}_or_err", field_ident),
+                |_| format_ident!("{}_or_err", field_ident),
+            );
+            Some(quote_spanned!(field_span=>
+                .field(
+                    #field_name
+                    &self.#field_getter()
+                        .as_ref()
+                        .map_or_else(
+                            |__bf_err| ::modular_bitfield::FieldValueOrError::Error(__bf_err),
+                            |__bf_field| ::modular_bitfield::FieldValueOrError::FieldValue(__bf_field)
+                        )
+                )?
+            ))
+        });
+        Some(quote_spanned!(span=>
+            impl #impl_generics ::ufmt::uDebug for #ident #ty_generics #where_clause {
+                fn fmt<W>(&self, __bf_f: &mut ::ufmt::Formatter<'_, W>) -> ::core::result::Result<(), W::Error>
+                where
+                    W: ::ufmt::uWrite + ?Sized{
+                    __bf_f.#builder_name(::core::stringify!(#ident))?
                         #( #fields )*
                         .finish()
                 }

@@ -7,6 +7,8 @@ pub mod error;
 #[doc(hidden)]
 pub mod private;
 
+#[cfg(feature = "ufmt")]
+use ufmt::{uDebug, uWrite};
 use self::error::{InvalidBitPattern, OutOfBounds};
 
 #[doc = include_str!("../docs/bitfield.md")]
@@ -17,6 +19,29 @@ pub use modular_bitfield_impl::Specifier;
 
 #[doc(hidden)]
 pub use modular_bitfield_impl::BitfieldSpecifier;
+
+/// Enum for either the value of a bitfield, or the error resulting from trying to read it.
+#[cfg(feature = "ufmt")]
+pub enum FieldValueOrError<F, E> {
+    /// Read field value
+    FieldValue(F),
+    /// Error returned when trying to read a field
+    Error(E),
+}
+
+#[cfg(feature = "ufmt")]
+impl<F: uDebug, E: uDebug> uDebug for FieldValueOrError<F, E> {
+    #[inline]
+    fn fmt<W>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error>
+    where
+        W: uWrite + ?Sized
+    {
+        match self {
+            FieldValueOrError::FieldValue(value) => value.fmt(f),
+            FieldValueOrError::Error(value) => value.fmt(f),
+        }
+    }
+}
 
 /// The prelude: `use modular_bitfield::prelude::*;`
 pub mod prelude {

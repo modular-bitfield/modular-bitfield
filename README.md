@@ -24,6 +24,12 @@ Implements the `#[bitfield]` macros introduced and specified in David Tolnay's [
 
 Thanks go to David Tolnay for designing the specification for the macros implemented in this crate.
 
+## Optional Cargo Features
+- **`ufmt`**: Support for the [ufmt](https://docs.rs/ufmt/latest) crate.
+  - This creates better output when using `#[derive(uDebug)]` on bitfield structs analogous to `#[derive(Debug)]` which generally results in lower binary size/higher performance compared to the standard `Debug` code on most platforms.
+    
+    See the [`#[bitfield]` documentation](docs/bitfield.md#support-deriveudebug)
+
 ## Usage
 
 Annotate a Rust struct with the `#[bitfield]` attribute in order to convert it into a bitfield.

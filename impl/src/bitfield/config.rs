@@ -13,6 +13,8 @@ pub struct Config {
     pub filled: Option<ConfigValue<bool>>,
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
+    #[cfg(feature = "ufmt")]
+    pub derive_udebug: Option<ConfigValue<()>>,
     pub derive_specifier: Option<ConfigValue<()>>,
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
@@ -243,6 +245,26 @@ impl Config {
                 ))
             }
             None => self.derive_debug = Some(ConfigValue::new((), span)),
+        }
+        Ok(())
+    }
+
+    /// Registers the `#[derive(uDebug)]` attribute for the #[bitfield] macro.
+    ///
+    /// # Errors
+    ///
+    /// If a `#[derive(uDebug)]` attribute has already been found.
+    #[cfg(feature = "ufmt")]
+    pub fn derive_udebug(&mut self, span: Span) -> Result<()> {
+        match &self.derive_udebug {
+            Some(previous) => {
+                return Err(Self::raise_duplicate_error(
+                    "#[derive(uDebug)]",
+                    span,
+                    previous,
+                ))
+            }
+            None => self.derive_udebug = Some(ConfigValue::new((), span)),
         }
         Ok(())
     }

@@ -1,6 +1,8 @@
 //! Errors that can occur while operating on modular bitfields.
 
 use core::fmt::Debug;
+#[cfg(feature = "ufmt")]
+use ufmt::derive::uDebug;
 
 /// The given value was out of range for the bitfield.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -14,6 +16,7 @@ impl core::fmt::Display for OutOfBounds {
 
 /// The bitfield contained an invalid bit pattern.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ufmt", derive(uDebug))]
 pub struct InvalidBitPattern<Bytes> {
     /// The invalid bits.
     invalid_bytes: Bytes,
