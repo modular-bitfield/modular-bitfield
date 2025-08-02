@@ -12,7 +12,7 @@ use proc_macro::TokenStream;
 
 /// Generates the `B1`, `B2`, ..., `B128` bitfield specifiers.
 ///
-/// Only of use witihn the `modular_bitfield` crate itself.
+/// Only of use within the `modular_bitfield` crate itself.
 #[proc_macro]
 pub fn define_specifiers(input: TokenStream) -> TokenStream {
     define_specifiers::generate(input.into()).into()
@@ -21,6 +21,12 @@ pub fn define_specifiers(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn bitfield(args: TokenStream, input: TokenStream) -> TokenStream {
     bitfield::analyse_and_expand(args.into(), input.into()).into()
+}
+
+#[proc_macro_attribute]
+pub fn bitfield_reflect(_args: TokenStream, input: TokenStream) -> TokenStream {
+    // TODO: This is just a placeholder
+    input
 }
 
 #[proc_macro_derive(Specifier, attributes(bits))]
