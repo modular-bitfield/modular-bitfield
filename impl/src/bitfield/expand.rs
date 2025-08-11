@@ -144,8 +144,8 @@ impl BitfieldStruct {
                     self.#field_getter()
                         .as_ref()
                         .map_or_else(
-                            |__bf_err| __bf_err as &dyn (::core::fmt::Debug),
-                            |__bf_field| __bf_field as &dyn (::core::fmt::Debug)
+                            |__bf_err| __bf_err as &dyn ::core::fmt::Debug,
+                            |__bf_field| __bf_field as &dyn ::core::fmt::Debug
                         )
                 )
             ))
