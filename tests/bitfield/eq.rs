@@ -1,16 +1,15 @@
-
+use modular_bitfield::bitfield;
 use modular_bitfield::prelude::*;
 
 #[test]
 fn eq_specified_fields() {
-
     #[bitfield]
     #[derive(Debug, PartialEq, Eq)]
     pub struct DataPackage {
         is_ok: bool,
         contents: B4,
         is_received: bool,
-        dummy: B2
+        dummy: B2,
     }
 
     let package_1 = DataPackage::from_bytes([0b0101_1011]);
@@ -24,7 +23,6 @@ fn eq_specified_fields() {
 
 #[test]
 fn eq_skips_ignored_field() {
-
     #[bitfield]
     #[derive(PartialEq, Debug)]
     pub struct DataPackage {
@@ -32,7 +30,7 @@ fn eq_skips_ignored_field() {
         #[skip]
         __: B4,
         is_received: bool,
-        more_data: B2
+        more_data: B2,
     }
 
     let package_1 = DataPackage::from_bytes([0b1001_1111]);
@@ -42,7 +40,6 @@ fn eq_skips_ignored_field() {
 
 #[test]
 fn eq_skips_multi_ignored_field() {
-
     #[bitfield]
     #[derive(PartialEq, Debug)]
     pub struct DataPackage {
@@ -52,7 +49,7 @@ fn eq_skips_multi_ignored_field() {
         is_received: bool,
         more_data: B2,
         #[skip]
-        byte: u8
+        byte: u8,
     }
 
     let package_1 = DataPackage::from_bytes([0b1001_1111, 0b1010_1010]);
@@ -62,13 +59,12 @@ fn eq_skips_multi_ignored_field() {
 
 #[test]
 fn eq_skips_enum_field() {
-
     #[derive(Specifier, PartialEq, Eq, Debug)]
-    #[bits=2]
+    #[bits = 2]
     pub enum DataType {
         Control = 0,
-        Data =  1,
-        Ack = 2
+        Data = 1,
+        Ack = 2,
     }
     #[bitfield]
     #[derive(PartialEq, Debug)]
@@ -86,13 +82,12 @@ fn eq_skips_enum_field() {
 
 #[test]
 fn eq_considers_only_setters_field() {
-
     #[derive(Specifier, PartialEq, Eq, Debug)]
-    #[bits=2]
+    #[bits = 2]
     pub enum DataType {
         Control = 0,
-        Data =  1,
-        Ack = 2
+        Data = 1,
+        Ack = 2,
     }
     #[bitfield]
     #[derive(PartialEq, Debug)]
@@ -110,13 +105,12 @@ fn eq_considers_only_setters_field() {
 
 #[test]
 fn eq_considers_only_getters_field() {
-
     #[derive(Specifier, PartialEq, Eq, Debug)]
-    #[bits=2]
+    #[bits = 2]
     pub enum DataType {
         Control = 0,
-        Data =  1,
-        Ack = 2
+        Data = 1,
+        Ack = 2,
     }
     #[bitfield]
     #[derive(Debug, PartialEq)]
@@ -134,13 +128,12 @@ fn eq_considers_only_getters_field() {
 
 #[test]
 fn eq_all_fields_skipped() {
-
     #[derive(Specifier, PartialEq, Eq, Debug)]
-    #[bits=2]
+    #[bits = 2]
     pub enum DataType {
         Control = 0,
-        Data =  1,
-        Ack = 2
+        Data = 1,
+        Ack = 2,
     }
     #[bitfield]
     #[derive(Debug, PartialEq)]

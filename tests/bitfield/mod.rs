@@ -3,12 +3,12 @@ mod bytes_param;
 mod derive_bitfield_specifier;
 mod derive_debug;
 mod derive_specifier;
+mod eq;
 mod filled_param;
 mod no_implicit_prelude;
 mod regressions;
 mod repr;
 mod skip;
-mod eq;
 
 use modular_bitfield::prelude::*;
 

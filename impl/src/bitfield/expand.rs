@@ -298,7 +298,6 @@ impl BitfieldStruct {
         }
     }
 
-
     /// Returns a token stream representing the next greater value divisible by 8.
     fn next_divisible_by_8(value: &TokenStream2) -> TokenStream2 {
         let span = value.span();
@@ -737,20 +736,20 @@ impl BitfieldStruct {
             offset.push(syn::parse_quote! { 0usize });
             offset
         };
-        
+
         let field_comparisons: Vec<_> = self
             .field_infos(config)
             .map(|field_info| self.expand_eq_for_field(&mut offset, &field_info))
             .filter_map(|f| f)
             .collect();
-        
+
         let comparison_expr = if field_comparisons.is_empty() {
             // If no fields are considered, assume equal
             quote_spanned!(span=> true)
         } else {
             quote_spanned!(span=> #( #field_comparisons )&&*)
         };
-        
+
         quote_spanned!(span=>
             impl #impl_generics ::core::cmp::PartialEq for #ident #ty_generics #where_clause {
                 fn eq(&self, other: &Self) -> bool {
@@ -772,7 +771,7 @@ impl BitfieldStruct {
         } = info;
         let span = field.span();
         let ty = &field.ty;
-        
+
         let field_comparison = if info.config.skip_getters() && info.config.skip_setters() {
             // If we have a #[skip] annotation, don't include this field in this comparison
             None
@@ -792,10 +791,10 @@ impl BitfieldStruct {
         };
         // Update offset for next field
         offset.push(syn::parse_quote! { <#ty as ::modular_bitfield::Specifier>::BITS });
-        
+
         field_comparison
     }
-    
+
     fn generate_eq(&self, config: &Config) -> Option<TokenStream2> {
         if config.derive_partial_eq.is_some() {
             Some(self.expand_eq(config))
@@ -803,5 +802,4 @@ impl BitfieldStruct {
             None
         }
     }
-
 }
