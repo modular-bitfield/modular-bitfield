@@ -97,7 +97,7 @@ impl BitfieldStruct {
         Ok(())
     }
 
-    /// Extracts the `#[derive(Debug)]` annotations from the given `#[bitfield]` struct.
+    /// Extracts the `#[derive(Debug)]` and `#[derive(PartialEq)]` annotations from the given `#[bitfield]` struct.
     fn extract_derive_debug_attribute(attr: &syn::Attribute, config: &mut Config) -> Result<()> {
         let list = attr.meta.require_list()?;
         let mut retained_derives = vec![];
@@ -105,6 +105,8 @@ impl BitfieldStruct {
             let path = &meta.path;
             if path.is_ident("Debug") {
                 config.derive_debug(path.span())?;
+            } else if path.is_ident("PartialEq") {
+                config.derive_partial_eq(path.span())?;
             } else if path.is_ident("BitfieldSpecifier") {
                 config.deprecated_specifier(path.span());
                 config.derive_specifier(path.span())?;
