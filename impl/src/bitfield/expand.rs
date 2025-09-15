@@ -744,12 +744,10 @@ impl BitfieldStruct {
             .filter_map(|f| f)
             .collect();
         
-        // Generate the equality implementation
         let comparison_expr = if field_comparisons.is_empty() {
-            // If no fields, they're equal (empty structs are equal)
+            // If no fields are considered, assume equal
             quote_spanned!(span=> true)
         } else {
-            // Join all field comparisons with &&
             quote_spanned!(span=> #( #field_comparisons )&&*)
         };
         
@@ -789,8 +787,6 @@ impl BitfieldStruct {
                         ::modular_bitfield::private::read_specifier::<#ty>(&other.bytes[..], #offset)
                     };
                     __bf_self_read == __bf_other_read
-                    /*<#ty as ::modular_bitfield::Specifier>::from_bytes(__bf_self_read).expect("invalid bitfield specification") == 
-                    <#ty as ::modular_bitfield::Specifier>::from_bytes(__bf_other_read).expect("invalid bitfield specification")*/
                 })
             ))
         };
