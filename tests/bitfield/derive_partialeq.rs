@@ -1,4 +1,4 @@
-use modular_bitfield::bitfield;
+//! Tests for `#[derive(PartialEq)]` using `#[bitfield]`
 use modular_bitfield::prelude::*;
 
 #[test]

@@ -259,6 +259,7 @@ that compares all defined fields. Any fields annotated with `#[skip]` will be ig
 
 ### Example
 ```
+# use modular_bitfield::prelude::*;
     #[bitfield]
     #[derive(PartialEq, Debug)]
     pub struct DataPackage {
