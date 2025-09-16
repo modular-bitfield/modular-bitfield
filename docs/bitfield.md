@@ -250,6 +250,31 @@ assert_eq!(
 );
 ```
 
+
+## Support: `#[derive(PartialEq)]`
+
+If a `#[derive(PartialEq)]` is found by the `#[bitfield]`, a comparison operator will be implemented
+that compares all defined fields. Any fields annotated with `#[skip]` will be ignored, but
+`#[skip(getters)]` or `#[skip(setters)]` will still be considered.
+
+### Example
+```
+# use modular_bitfield::prelude::*;
+    #[bitfield]
+    #[derive(PartialEq, Debug)]
+    pub struct DataPackage {
+        is_ok: bool,
+        #[skip]
+        __: B4,
+        is_received: bool,
+        more_data: B2
+    }
+
+    let package_1 = DataPackage::from_bytes([0b1001_1111]);
+    let package_1_should_eq = DataPackage::from_bytes([0b1000_0001]);
+    assert_eq!(package_1, package_1_should_eq);
+```
+
 ## Support: `#[repr(uN)]`
 
 It is possible to additionally annotate a `#[bitfield]` annotated struct with `#[repr(uN)]`

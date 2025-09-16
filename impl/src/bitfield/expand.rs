@@ -21,7 +21,7 @@ impl BitfieldStruct {
         let bytes_check = self.expand_optional_bytes_check(config);
         let repr_impls_and_checks = self.expand_repr_from_impls_and_checks(config);
         let debug_impl = self.generate_debug_impl(config);
-
+        let eq_impl = self.generate_eq(config);
         quote_spanned!(span=>
             #struct_definition
             #check_filled
@@ -32,6 +32,7 @@ impl BitfieldStruct {
             #bytes_check
             #repr_impls_and_checks
             #debug_impl
+            #eq_impl
         )
     }
 
@@ -724,5 +725,81 @@ impl BitfieldStruct {
                 #( #setters_and_getters )*
             }
         )
+    }
+
+    fn expand_eq(&self, config: &Config) -> TokenStream2 {
+        let span = self.item_struct.span();
+        let ident = &self.item_struct.ident;
+        let (impl_generics, ty_generics, where_clause) = self.item_struct.generics.split_for_impl();
+        let mut offset = {
+            let mut offset = Punctuated::<syn::Expr, Token![+]>::new();
+            offset.push(syn::parse_quote! { 0usize });
+            offset
+        };
+
+        let field_comparisons: Vec<_> = self
+            .field_infos(config)
+            .map(|field_info| self.expand_eq_for_field(&mut offset, &field_info))
+            .filter_map(|f| f)
+            .collect();
+
+        let comparison_expr = if field_comparisons.is_empty() {
+            // If no fields are considered, assume equal
+            quote_spanned!(span=> true)
+        } else {
+            quote_spanned!(span=> #( #field_comparisons )&&*)
+        };
+
+        quote_spanned!(span=>
+            impl #impl_generics ::core::cmp::PartialEq for #ident #ty_generics #where_clause {
+                fn eq(&self, other: &Self) -> bool {
+                    #comparison_expr
+                }
+            }
+        )
+    }
+
+    fn expand_eq_for_field(
+        &self,
+        offset: &mut Punctuated<syn::Expr, syn::Token![+]>,
+        info: &FieldInfo<'_>,
+    ) -> Option<TokenStream2> {
+        let FieldInfo {
+            index: _,
+            field,
+            config: _,
+        } = info;
+        let span = field.span();
+        let ty = &field.ty;
+
+        let field_comparison = if info.config.skip_getters() && info.config.skip_setters() {
+            // If we have a #[skip] annotation, don't include this field in this comparison
+            None
+        } else {
+            // Generate code to read the field value from both self and other
+            Some(quote_spanned!(span=>
+                ({
+                    let __bf_self_read: <#ty as ::modular_bitfield::Specifier>::Bytes = {
+                        ::modular_bitfield::private::read_specifier::<#ty>(&self.bytes[..], #offset)
+                    };
+                    let __bf_other_read: <#ty as ::modular_bitfield::Specifier>::Bytes = {
+                        ::modular_bitfield::private::read_specifier::<#ty>(&other.bytes[..], #offset)
+                    };
+                    __bf_self_read == __bf_other_read
+                })
+            ))
+        };
+        // Update offset for next field
+        offset.push(syn::parse_quote! { <#ty as ::modular_bitfield::Specifier>::BITS });
+
+        field_comparison
+    }
+
+    fn generate_eq(&self, config: &Config) -> Option<TokenStream2> {
+        if config.derive_partial_eq.is_some() {
+            Some(self.expand_eq(config))
+        } else {
+            None
+        }
     }
 }

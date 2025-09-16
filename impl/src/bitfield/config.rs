@@ -13,6 +13,7 @@ pub struct Config {
     pub filled: Option<ConfigValue<bool>>,
     pub repr: Option<ConfigValue<ReprKind>>,
     pub derive_debug: Option<ConfigValue<()>>,
+    pub derive_partial_eq: Option<ConfigValue<()>>,
     pub derive_specifier: Option<ConfigValue<()>>,
     pub deprecated_specifier: Option<Span>,
     pub retained_attributes: Vec<syn::Attribute>,
@@ -243,6 +244,25 @@ impl Config {
                 ))
             }
             None => self.derive_debug = Some(ConfigValue::new((), span)),
+        }
+        Ok(())
+    }
+
+    /// Registers the `#[derive(PartialEq)]` attribute for the #[bitfield] macro.
+    ///
+    /// # Errors
+    ///
+    /// If a `#[derive(PartialEq)]` attribute has already been found.
+    pub fn derive_partial_eq(&mut self, span: Span) -> Result<()> {
+        match &self.derive_partial_eq {
+            Some(previous) => {
+                return Err(Self::raise_duplicate_error(
+                    "#[derive(PartialEq)]",
+                    span,
+                    previous,
+                ))
+            }
+            None => self.derive_partial_eq = Some(ConfigValue::new((), span)),
         }
         Ok(())
     }
