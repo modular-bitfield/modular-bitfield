@@ -1,6 +1,6 @@
 use modular_bitfield::prelude::*;
 
-#[derive(Specifier)]
+#[derive_const(Specifier)]
 #[bits = 1]
 #[bits = 1]
 enum TooManyAttrs {
@@ -8,7 +8,7 @@ enum TooManyAttrs {
     One = 1,
 }
 
-#[derive(Specifier)]
+#[derive_const(Specifier)]
 #[bits = 1.0]
 enum NotAnInt {
     Zero = 0,

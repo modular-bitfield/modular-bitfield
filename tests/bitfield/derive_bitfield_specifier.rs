@@ -1,4 +1,4 @@
-//! Tests specific to the `#[derive(Specifier)]` proc. macro
+//! Tests specific to the `#[derive_const(Specifier)]` proc. macro
 
 use modular_bitfield::prelude::*;
 
@@ -9,7 +9,7 @@ use modular_bitfield::prelude::*;
 //
 //     // Works like B3, but getter and setter signatures will use
 //     // the enum instead of u8.
-//     #[derive(Specifier)]
+//     #[derive_const(Specifier)]
 //     enum DeliveryMode {
 //         Fixed = 0b000,
 //         Lowest = 0b001,
@@ -29,7 +29,7 @@ use modular_bitfield::prelude::*;
 // have a number of variants that is not a power of two. If the #[bits = N]
 // attribute is specified, like so:
 //
-//     #[derive(Specifier)]
+//     #[derive_const(Specifier)]
 //     #[bits = 4]
 //     enum SmallPrime {
 //         Two = 0b0010,
@@ -61,13 +61,15 @@ fn enums() {
         another_small_prime: SmallPrime,
     }
 
-    #[derive(Specifier, Debug, PartialEq)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq)]
     pub enum TriggerMode {
         Edge = 0,
         Level = 1,
     }
 
-    #[derive(Specifier, Debug, PartialEq)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq)]
     pub enum DeliveryMode {
         Fixed = 0b000,
         Lowest = 0b001,
@@ -79,7 +81,8 @@ fn enums() {
         External = 0b111,
     }
 
-    #[derive(Specifier, Debug, PartialEq)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq)]
     #[bits = 4]
     pub enum SmallPrime {
         Two = 0b0010,
@@ -112,7 +115,7 @@ fn enums() {
 
 #[test]
 fn name_conflict() {
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub enum SuspiciouslyAmbiguous {
         Bytes,
         InOut,
@@ -145,7 +148,8 @@ fn optional_discriminant() {
     const F: isize = 3;
     const G: isize = 0;
 
-    #[derive(Specifier, Debug, PartialEq)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq)]
     pub enum DeliveryMode {
         Fixed = F,
         Lowest,

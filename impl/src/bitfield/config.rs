@@ -247,16 +247,16 @@ impl Config {
         Ok(())
     }
 
-    /// Registers the `#[derive(Specifier)]` attribute for the #[bitfield] macro.
+    /// Registers the `#[derive_const(Specifier)]` attribute for the #[bitfield] macro.
     ///
     /// # Errors
     ///
-    /// If a `#[derive(Specifier)]` attribute has already been found.
+    /// If a `#[derive_const(Specifier)]` attribute has already been found.
     pub fn derive_specifier(&mut self, span: Span) -> Result<()> {
         match &self.derive_specifier {
             Some(previous) => {
                 return Err(Self::raise_duplicate_error(
-                    "#[derive(Specifier)]",
+                    "#[derive_const(Specifier)]",
                     span,
                     previous,
                 ))

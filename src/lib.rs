@@ -1,7 +1,14 @@
 #![doc = include_str!("../docs/index.md")]
 #![no_std]
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)] TODO: See issue with PushBits
 #![warn(clippy::pedantic, missing_docs, rust_2018_idioms)]
+
+#![feature(const_trait_impl)]
+#![feature(const_try)]
+#![feature(const_option_ops)]
+#![feature(const_index)]
+#![feature(const_slice_make_iter)]
+#![feature(const_default)]
 
 pub mod error;
 #[doc(hidden)]
@@ -35,6 +42,7 @@ pub mod prelude {
 /// These can be all unsigned fixed-size primitives,
 /// represented by `B1, B2, ... B64` and enums that
 /// derive from `Specifier`.
+#[const_trait]
 pub trait Specifier {
     /// The amount of bits used by the specifier.
     const BITS: usize;

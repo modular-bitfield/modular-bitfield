@@ -3,6 +3,9 @@
 //!
 //! We want to find out which crate produces the more efficient code for different
 //! use cases and scenarios.
+#![feature(const_try)]
+#![feature(const_trait_impl)]
+#![feature(const_index)]
 
 mod utils;
 

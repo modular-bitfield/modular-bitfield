@@ -36,7 +36,7 @@ impl BitfieldStruct {
     }
 
     /// Expands to the `Specifier` impl for the `#[bitfield]` struct if the
-    /// `#[derive(Specifier)]` attribute is applied to it as well.
+    /// `#[derive_const(Specifier)]` attribute is applied to it as well.
     ///
     /// Otherwise returns `None`.
     pub fn generate_specifier_impl(&self, config: &Config) -> Option<TokenStream2> {
@@ -66,7 +66,7 @@ impl BitfieldStruct {
             };
 
             #[allow(clippy::identity_op)]
-            impl #impl_generics ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
+            impl #impl_generics const ::modular_bitfield::Specifier for #ident #ty_generics #where_clause {
                 const BITS: usize = #bits;
 
                 type Bytes = <[(); if #bits > 128 { 128 } else { #bits }] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
@@ -90,7 +90,7 @@ impl BitfieldStruct {
                 {
                     use ::core::convert::TryFrom;
                     let __bf_max_value: Self::Bytes = (0x01 as Self::Bytes)
-                        .checked_shl(u32::try_from(Self::BITS).unwrap())
+                        .checked_shl(Self::BITS as u32)
                         .unwrap_or(<Self::Bytes>::MAX);
                     if bytes <= __bf_max_value {
                         let __bf_bytes = bytes.to_le_bytes();
@@ -445,7 +445,7 @@ impl BitfieldStruct {
                 /// If the given bytes contain bits at positions that are undefined for `Self`.
                 #[inline]
                 #[allow(clippy::identity_op)]
-                pub fn from_bytes(
+                pub fn from_bytes( // TODO: Const?
                     bytes: [::core::primitive::u8; #next_divisible_by_8 / 8usize]
                 ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
                     if ::core::primitive::u16::from(bytes[(#next_divisible_by_8 / 8usize) - 1]) < (0x01 << (8 - (#next_divisible_by_8 - (#size)))) {
@@ -547,15 +547,18 @@ impl BitfieldStruct {
             #[inline]
             #[must_use]
             #( #retained_attrs )*
-            #vis fn #get_ident(&self) -> <#ty as ::modular_bitfield::Specifier>::InOut {
-                self.#get_checked_ident().expect(#get_assert_msg)
+            #vis const fn #get_ident(&self) -> <#ty as ::modular_bitfield::Specifier>::InOut {
+                match self.#get_checked_ident() {
+                    ::core::result::Result::Ok(val) => val,
+                    ::core::result::Result::Err(_) => ::core::panic!(#get_assert_msg),
+                }
             }
 
             #[doc = #checked_getter_docs]
             #[inline]
             #[allow(dead_code)]
             #( #retained_attrs )*
-            #vis fn #get_checked_ident(
+            #vis const fn #get_checked_ident(
                 &self,
             ) -> ::core::result::Result<
                 <#ty as ::modular_bitfield::Specifier>::InOut,
@@ -626,7 +629,7 @@ impl BitfieldStruct {
             #[allow(dead_code)]
             #[must_use]
             #( #retained_attrs )*
-            #vis fn #with_ident(
+            #vis const fn #with_ident(
                 mut self,
                 new_val: <#ty as ::modular_bitfield::Specifier>::InOut
             ) -> Self {
@@ -638,7 +641,7 @@ impl BitfieldStruct {
             #[inline]
             #[allow(dead_code)]
             #( #retained_attrs )*
-            #vis fn #with_checked_ident(
+            #vis const fn #with_checked_ident(
                 mut self,
                 new_val: <#ty as ::modular_bitfield::Specifier>::InOut,
             ) -> ::core::result::Result<Self, ::modular_bitfield::error::OutOfBounds> {
@@ -650,14 +653,17 @@ impl BitfieldStruct {
             #[inline]
             #[allow(dead_code)]
             #( #retained_attrs )*
-            #vis fn #set_ident(&mut self, new_val: <#ty as ::modular_bitfield::Specifier>::InOut) {
-                self.#set_checked_ident(new_val).expect(#set_assert_msg)
+            #vis const fn #set_ident(&mut self, new_val: <#ty as ::modular_bitfield::Specifier>::InOut) {
+                match self.#set_checked_ident(new_val) {
+                    ::core::result::Result::Ok(()) => {},
+                    ::core::result::Result::Err(_) => ::core::panic!(#set_assert_msg),
+                }
             }
 
             #[doc = #checked_setter_docs]
             #[inline]
             #( #retained_attrs )*
-            #vis fn #set_checked_ident(
+            #vis const fn #set_checked_ident(
                 &mut self,
                 new_val: <#ty as ::modular_bitfield::Specifier>::InOut
             ) -> ::core::result::Result<(), ::modular_bitfield::error::OutOfBounds> {

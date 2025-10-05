@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+#![feature(const_try)]
+#![feature(const_trait_impl)]
+#![feature(const_index)]
 
 mod utils;
 

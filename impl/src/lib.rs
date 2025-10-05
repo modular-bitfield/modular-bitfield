@@ -30,7 +30,7 @@ pub fn specifier(input: TokenStream) -> TokenStream {
 
 #[deprecated(
     since = "0.12.0",
-    note = "use #[derive(Specifier)]. This alias will be removed in 0.13."
+    note = "use #[derive_const(Specifier)]. This alias will be removed in 0.13."
 )]
 #[proc_macro_derive(BitfieldSpecifier, attributes(bits))]
 pub fn bitfield_specifier(input: TokenStream) -> TokenStream {

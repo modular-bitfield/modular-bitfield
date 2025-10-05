@@ -6,7 +6,7 @@ use super::checks;
 ///
 /// Must not and cannot be implemented by dependencies.
 #[doc(hidden)]
-pub trait PushBits: checks::private::Sealed {
+pub const trait PushBits: checks::private::Sealed {
     fn push_bits(&mut self, amount: u32, bits: u8);
 }
 
@@ -16,7 +16,7 @@ pub trait PushBits: checks::private::Sealed {
 ///
 /// Must not and cannot be implemented by dependencies.
 #[doc(hidden)]
-pub trait PopBits: checks::private::Sealed {
+pub const trait PopBits: checks::private::Sealed {
     fn pop_bits(&mut self, amount: u32) -> u8;
 }
 

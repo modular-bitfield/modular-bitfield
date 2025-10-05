@@ -5,10 +5,10 @@ use crate::{
 
 /// Creates a new push buffer with all bits initialized to 0.
 #[inline]
-fn push_buffer<T>() -> PushBuffer<<T as Specifier>::Bytes>
+const fn push_buffer<T>() -> PushBuffer<<T as Specifier>::Bytes>
 where
     T: Specifier,
-    PushBuffer<T::Bytes>: Default,
+    PushBuffer<T::Bytes>: const Default,
 {
     <PushBuffer<<T as Specifier>::Bytes> as Default>::default()
 }
@@ -16,10 +16,10 @@ where
 #[doc(hidden)]
 #[inline]
 #[must_use]
-pub fn read_specifier<T>(bytes: &[u8], offset: usize) -> <T as Specifier>::Bytes
+pub const fn read_specifier<T>(bytes: &[u8], offset: usize) -> <T as Specifier>::Bytes
 where
-    T: Specifier,
-    PushBuffer<T::Bytes>: Default + PushBits,
+    T: const Specifier,
+    PushBuffer<T::Bytes>: const Default + const PushBits,
 {
     let end = offset + <T as Specifier>::BITS;
     let ls_byte = offset / 8; // compile-time
@@ -36,8 +36,11 @@ where
 
     if lsb_offset == 0 && msb_offset == 8 {
         // Edge-case for whole bytes manipulation.
-        for byte in bytes[ls_byte..=ms_byte].iter().rev() {
-            buffer.push_bits(8, *byte);
+        let mut bindex = ms_byte;
+        while bindex >= ls_byte {
+            buffer.push_bits(8, bytes[bindex]);
+            if bindex == 0 { break; }
+            bindex -= 1;
         }
     } else {
         if ls_byte != ms_byte {
@@ -46,13 +49,15 @@ where
         }
         if ms_byte - ls_byte >= 2 {
             // Middle bytes
-            for byte in bytes[(ls_byte + 1)..ms_byte].iter().rev() {
-                buffer.push_bits(8, *byte);
+            let mut bindex = ms_byte - 1;
+            while bindex > ls_byte {
+                buffer.push_bits(8, bytes[bindex]);
+                bindex -= 1;
             }
         }
         if ls_byte == ms_byte {
             buffer.push_bits(
-                u32::try_from(<T as Specifier>::BITS).unwrap(),
+                <T as Specifier>::BITS as u32,
                 bytes[ls_byte] >> lsb_offset,
             );
         } else {
@@ -64,10 +69,10 @@ where
 
 #[doc(hidden)]
 #[inline]
-pub fn write_specifier<T>(bytes: &mut [u8], offset: usize, new_val: <T as Specifier>::Bytes)
+pub const fn write_specifier<T>(bytes: &mut [u8], offset: usize, new_val: <T as Specifier>::Bytes)
 where
-    T: Specifier,
-    PopBuffer<T::Bytes>: PopBits,
+    T: const Specifier,
+    PopBuffer<T::Bytes>: const PopBits,
 {
     let end = offset + <T as Specifier>::BITS;
     let ls_byte = offset / 8; // compile-time
@@ -84,8 +89,10 @@ where
 
     if lsb_offset == 0 && msb_offset == 8 {
         // Edge-case for whole bytes manipulation.
-        for byte in &mut bytes[ls_byte..=ms_byte] {
-            *byte = buffer.pop_bits(8);
+        let mut bindex = ls_byte;
+        while bindex <= ms_byte {
+            bytes[bindex] = buffer.pop_bits(8);
+            bindex += 1;
         }
     } else {
         // Least-significant byte
@@ -99,8 +106,10 @@ where
         bytes[ls_byte] = stays_same | (overwrite << lsb_offset);
         if ms_byte - ls_byte >= 2 {
             // Middle bytes
-            for byte in &mut bytes[(ls_byte + 1)..ms_byte] {
-                *byte = buffer.pop_bits(8);
+            let mut bindex = ls_byte + 1;
+            while bindex < ms_byte {
+                bytes[bindex] = buffer.pop_bits(8);
+                bindex += 1;
             }
         }
         if ls_byte != ms_byte {
@@ -116,4 +125,7 @@ where
             }
         }
     }
+
+    // TODO: Consider this further.
+    core::mem::forget(buffer);
 }

@@ -10,7 +10,9 @@
 //! This allows us to further enhance the hand-written code
 //! and to eventually come up with new optimization tricks
 //! for the macro generated code while staying correct.
-
+#![feature(const_try)]
+#![feature(const_trait_impl)]
+#![feature(const_index)]
 mod utils;
 
 use utils::{

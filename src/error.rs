@@ -35,7 +35,7 @@ where
 impl<Bytes> InvalidBitPattern<Bytes> {
     /// Creates a new invalid bit pattern error.
     #[inline]
-    pub fn new(invalid_bytes: Bytes) -> Self {
+    pub const fn new(invalid_bytes: Bytes) -> Self {
         Self { invalid_bytes }
     }
 

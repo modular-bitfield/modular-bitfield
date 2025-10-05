@@ -97,7 +97,7 @@ impl BitfieldStruct {
         Ok(())
     }
 
-    /// Extracts the `#[derive(Debug)]` annotations from the given `#[bitfield]` struct.
+    /// Extracts the `#[derive(Debug)]` and `#[derive(Specifier)]` annotations from the given `#[bitfield]` struct.
     fn extract_derive_debug_attribute(attr: &syn::Attribute, config: &mut Config) -> Result<()> {
         let list = attr.meta.require_list()?;
         let mut retained_derives = vec![];
@@ -142,7 +142,8 @@ impl BitfieldStruct {
         for attr in attributes {
             if attr.path().is_ident("repr") {
                 Self::extract_repr_attribute(attr, config)?;
-            } else if attr.path().is_ident("derive") {
+            } else if attr.path().is_ident("derive") || attr.path().is_ident("derive_const") {
+                // TODO: split the called function to const/non-const
                 Self::extract_derive_debug_attribute(attr, config)?;
             } else {
                 config.push_retained_attribute(attr.clone());

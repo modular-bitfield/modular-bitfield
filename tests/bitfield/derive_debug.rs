@@ -6,7 +6,8 @@ use modular_bitfield::prelude::*;
 
 #[test]
 fn print_invalid_bits() {
-    #[derive(Specifier, Debug)]
+    #[derive_const(Specifier)]
+    #[derive(Debug)]
     #[bits = 2]
     pub enum Status {
         Green = 0,
@@ -64,7 +65,8 @@ fn respects_other_derives() {
 
 #[test]
 fn valid_use_2() {
-    #[derive(Specifier, Debug)]
+    #[derive_const(Specifier)]
+    #[derive(Debug)]
     pub enum Status {
         Green,
         Yellow,
@@ -99,7 +101,8 @@ fn valid_use_2() {
 #[test]
 fn valid_use_specifier() {
     #[bitfield(filled = false)] // Requires just 4 bits!
-    #[derive(Specifier, Debug)]
+    #[derive_const(Specifier)]
+    #[derive(Debug)]
     pub struct Header {
         status: B2,
         is_alive: bool,
