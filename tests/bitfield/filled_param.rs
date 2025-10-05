@@ -24,7 +24,7 @@ fn valid_bitfield_2() {
 fn valid_bitfield_specifier_1() {
     // The bitfield only has 23 bits and therefore is unfilled.
     #[bitfield(filled = false)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct UnfilledSpecifier {
         a: B7,
         b: u16,
@@ -35,7 +35,8 @@ fn valid_bitfield_specifier_1() {
 fn valid_bitfield_specifier_2() {
     // The bitfield has 24 bits and therefore is filled.
     #[bitfield(filled = true)]
-    #[derive(Specifier, Debug, PartialEq, Eq, Clone, Copy)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
     pub struct FilledSpecifier {
         a: B8,
         b: u16,

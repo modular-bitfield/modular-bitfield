@@ -1,11 +1,11 @@
-error: encountered duplicate `#[derive(Specifier)]` parameter
+error: encountered duplicate `#[derive_const(Specifier)]` parameter
  --> tests/ui/derive_specifier/duplicate_derive_2.rs:4:31
   |
-4 | #[derive(Specifier)] #[derive(Specifier)]
+4 | #[derive_const(Specifier)] #[derive_const(Specifier)]
   |                               ^^^^^^^^^
 
-error: previous `#[derive(Specifier)]` parameter here
+error: previous `#[derive_const(Specifier)]` parameter here
  --> tests/ui/derive_specifier/duplicate_derive_2.rs:4:10
   |
-4 | #[derive(Specifier)] #[derive(Specifier)]
+4 | #[derive_const(Specifier)] #[derive_const(Specifier)]
   |          ^^^^^^^^^

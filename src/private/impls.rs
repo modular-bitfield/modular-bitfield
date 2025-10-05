@@ -3,14 +3,14 @@ use crate::{
     Specifier,
 };
 
-impl Specifier for bool {
+impl const Specifier for bool {
     const BITS: usize = 1;
     type Bytes = u8;
     type InOut = bool;
 
     #[inline]
     fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds> {
-        Ok(input.into())
+        Ok(input as u8)
     }
 
     #[inline]
@@ -26,7 +26,7 @@ impl Specifier for bool {
 macro_rules! impl_specifier_for_primitive {
     ( $( ($prim:ty: $bits:literal) ),* $(,)? ) => {
         $(
-            impl Specifier for $prim {
+            impl const Specifier for $prim {
                 const BITS: usize = $bits;
                 type Bytes = $prim;
                 type InOut = $prim;

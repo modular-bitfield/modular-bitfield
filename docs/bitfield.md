@@ -98,12 +98,12 @@ pub struct Package {
 ### Example 2
 
 The `bits: int` parameter is especially useful when using this in conjunction with
-`#[derive(Specifier)]` and `filled = false` as shown in the below example.
+`#[derive_const(Specifier)]` and `filled = false` as shown in the below example.
 
 ```
 # use modular_bitfield::prelude::*;
 #[bitfield(bits = 5)]
-#[derive(Specifier)]
+#[derive_const(Specifier)]
 pub struct Package {
     is_received: bool, // 1 bit
     is_alive: bool,    // 1 bit
@@ -121,7 +121,7 @@ To ensure at compile time that a field of a `#[bitfield]` struct has a bit width
 ```
 # use modular_bitfield::prelude::*;
 # #[bitfield(filled = false)]
-# #[derive(Specifier)]
+# #[derive_const(Specifier)]
 # pub struct Header {
 #     is_received: bool, // 1 bit
 #     is_alive: bool,    // 1 bit
@@ -180,9 +180,9 @@ pub struct Sparse {
 
 # Features
 
-## Support: `#[derive(Specifier)]`
+## Support: `#[derive_const(Specifier)]`
 
-If a `#[bitfield]` struct is annotated with a `#[derive(Specifier)]` attribute
+If a `#[bitfield]` struct is annotated with a `#[derive_const(Specifier)]` attribute
 an implementation of the `Specifier` trait will be generated for it. This has the effect
 that the bitfield struct itself can be used as the type of a field of another bitfield type.
 
@@ -194,7 +194,7 @@ This restriction is ensured at compile time.
 ```
 # use modular_bitfield::prelude::*;
 #[bitfield(filled = false)]
-#[derive(Specifier)]
+#[derive_const(Specifier)]
 pub struct Header {
     is_received: bool, // 1 bit
     is_alive: bool,    // 1 bit
@@ -207,7 +207,7 @@ Now the above `Header` bitfield type can be used in yet another `#[bitfield]` an
 ```
 # use modular_bitfield::prelude::*;
 # #[bitfield(filled = false)]
-# #[derive(Specifier)]
+# #[derive_const(Specifier)]
 # pub struct Header {
 #     is_received: bool, // 1 bit
 #     is_alive: bool,    // 1 bit

@@ -1,6 +1,6 @@
 use modular_bitfield::prelude::*;
 
-#[derive(Specifier)]
+#[derive_const(Specifier)]
 pub union InvalidUnionSpecifier {
     a: bool,
     b: B7,

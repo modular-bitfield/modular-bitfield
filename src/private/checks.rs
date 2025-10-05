@@ -84,7 +84,7 @@ where
 /// is within valid bounds.
 pub trait DiscriminantInRange: private::Sealed {}
 
-/// Helper trait to check if a `#[derive(Specifier)]` flagged bitfield
+/// Helper trait to check if a `#[derive_const(Specifier)]` flagged bitfield
 /// requires
 /// at most 128 bits.
 pub trait SpecifierHasAtMost128Bits: private::Sealed {}
@@ -134,7 +134,7 @@ where
     type CheckType: DispatchTrueFalse;
 }
 
-/// Traits to check at compile-time if a `#[derive(Specifier)]` type requires
+/// Traits to check at compile-time if a `#[derive_const(Specifier)]` type requires
 /// no more than 128 bits.
 pub trait CheckSpecifierHasAtMost128Bits
 where

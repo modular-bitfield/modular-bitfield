@@ -5,7 +5,7 @@ use modular_bitfield::prelude::*;
 #[test]
 fn bits_non_filled_1() {
     #[bitfield(bits = 32, filled = false)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct SignIntegerShort {
         sign: bool,
         value: B7,
@@ -17,7 +17,7 @@ fn bits_non_filled_1() {
 #[test]
 fn bits_non_filled_2() {
     #[bitfield(bits = 32, filled = false)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct SignIntegerLong {
         sign: bool,
         value: B30,
@@ -28,7 +28,7 @@ fn bits_non_filled_2() {
 
 #[test]
 fn complex_use_case() {
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     #[bits = 2]
     pub enum Status {
         Red,
@@ -37,7 +37,7 @@ fn complex_use_case() {
     }
 
     #[bitfield(bits = 4)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct Header {
         is_compact: bool,
         is_secure: bool,
@@ -46,7 +46,7 @@ fn complex_use_case() {
     }
 
     #[bitfield(bits = 16, bytes = 2, filled = false)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct PackedData {
         #[bits = 4]
         header: Header,
@@ -63,7 +63,7 @@ fn complex_use_case() {
 #[test]
 fn low_bits_filled() {
     #[bitfield(bits = 4)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct Header {
         is_compact: bool,
         is_secure: bool,

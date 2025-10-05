@@ -1,6 +1,6 @@
 use crate::private::SpecifierBytes;
 
-pub trait ArrayBytesConversion {
+pub const trait ArrayBytesConversion {
     type Array;
     type Bytes;
 
@@ -11,7 +11,7 @@ pub trait ArrayBytesConversion {
 macro_rules! impl_array_bytes_conversion_for_prim {
     ( $( $prim:ty ),* ) => {
         $(
-            impl ArrayBytesConversion for [(); ::core::mem::size_of::<$prim>() * 8] {
+            impl const ArrayBytesConversion for [(); ::core::mem::size_of::<$prim>() * 8] {
                 type Array = [u8; ::core::mem::size_of::<$prim>()];
                 type Bytes = <Self as SpecifierBytes>::Bytes;
 
@@ -31,15 +31,15 @@ impl_array_bytes_conversion_for_prim!(u8, u16, u32, u64, u128);
 macro_rules! impl_array_bytes_conversion_for_size {
     ( $( $size:literal ),* ) => {
         $(
-            impl ArrayBytesConversion for [(); $size] {
+            impl const ArrayBytesConversion for [(); $size] {
                 type Array = [u8; $size / 8];
                 type Bytes = <Self as SpecifierBytes>::Bytes;
 
                 #[inline]
                 fn bytes_into_array(bytes: Self::Bytes) -> Self::Array {
                     let array = bytes.to_le_bytes();
-                    debug_assert!(array[($size / 8)..].iter().all(|&byte| byte == 0));
-                    let mut result = <Self::Array>::default();
+                    // debug_assert!(array[($size / 8)..].iter().all(|&byte| byte == 0)); TODO: enable once supported, or convert to a loop.
+                    let mut result = [0; $size / 8];
                     result.copy_from_slice(&array[0..($size / 8)]);
                     result
                 }

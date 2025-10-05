@@ -77,7 +77,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
         if !count_variants.is_power_of_two() {
             return Err(format_err!(
                 span,
-                "#[derive(Specifier)] expected a number of variants which is a power of 2, specify #[bits = {}] if that was your intent",
+                "#[derive_const(Specifier)] expected a number of variants which is a power of 2, specify #[bits = {}] if that was your intent",
                 count_variants.next_power_of_two().trailing_zeros(),
             ));
         }
@@ -87,7 +87,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
         } else {
             return Err(format_err!(
                 span,
-                "#[derive(Specifier)] has too many variants to pack into a bitfield",
+                "#[derive_const(Specifier)] has too many variants to pack into a bitfield",
             ));
         }
     };
@@ -121,7 +121,7 @@ fn generate_enum(input: &syn::ItemEnum) -> syn::Result<TokenStream2> {
     Ok(quote_spanned!(span=>
         #( #check_discriminants )*
 
-        impl #impl_generics ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
+        impl #impl_generics const ::modular_bitfield::Specifier for #enum_ident #ty_generics #where_clause {
             const BITS: usize = #bits;
             type Bytes = <[(); #bits] as ::modular_bitfield::private::SpecifierBytes>::Bytes;
             type InOut = Self;

@@ -35,7 +35,7 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
         #[derive(Copy, Clone)]
         pub enum #ident {}
 
-        impl crate::Specifier for #ident {
+        impl const crate::Specifier for #ident {
             const BITS: usize = #bits;
             type Bytes = #in_out;
             type InOut = #in_out;

@@ -15,7 +15,8 @@ fn deny_elided_lifetime() {
 
 #[test]
 fn regression_issue_8() {
-    #[derive(Specifier, Debug, PartialEq, Copy, Clone)]
+    #[derive_const(Specifier)]
+    #[derive(Debug, PartialEq, Copy, Clone)]
     pub enum Mode {
         A = 0b00,
         B = 0b01,

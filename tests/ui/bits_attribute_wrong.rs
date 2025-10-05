@@ -1,6 +1,7 @@
 use modular_bitfield::prelude::*;
 
-#[derive(Specifier, Debug)]
+#[derive_const(Specifier)]
+#[derive( Debug)]
 pub enum TriggerMode {
     Edge = 0,
     Level = 1,

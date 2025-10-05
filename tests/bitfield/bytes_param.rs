@@ -20,7 +20,7 @@ fn valid_bitfield() {
 fn valid_specifier_bitfield() {
     // Is only 9 bits, so will be 2 bytes in size.
     #[bitfield(bytes = 2, filled = false)]
-    #[derive(Specifier)]
+    #[derive_const(Specifier)]
     pub struct Header {
         a: B6,
         b: bool,

@@ -1,4 +1,8 @@
 #![allow(dead_code)]
+#![feature(const_trait_impl)]
+#![feature(const_try)]
+#![feature(derive_const)]
+#![feature(const_index)]
 
 use modular_bitfield::prelude::*;
 
