@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 publish = false # Use `release.sh`
 documentation = "https://docs.rs/modular-bitfield"
 repository = "https://github.com/modular-bitfield/modular-bitfield"
-rust-version = "1.70.0"
+rust-version = "1.76.0"
 version = "0.13.0-pre"
 
 [package]

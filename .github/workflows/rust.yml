@@ -43,7 +43,7 @@ jobs:
           - name: stable
             components: clippy, rustfmt, llvm-tools-preview
           - name: nightly
-          - name: "1.70" # rust-version, msrv
+          - name: "1.76" # rust-version, msrv
     steps:
       - name: Check out code
         uses: actions/checkout@v4
