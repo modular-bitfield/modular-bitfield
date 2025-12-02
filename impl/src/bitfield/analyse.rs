@@ -58,26 +58,26 @@ impl BitfieldStruct {
         for meta in repr_arguments {
             match meta {
                 syn::Meta::Path(path) => {
-            let repr_kind = if path.is_ident("u8") {
-                Some(ReprKind::U8)
-            } else if path.is_ident("u16") {
-                Some(ReprKind::U16)
-            } else if path.is_ident("u32") {
-                Some(ReprKind::U32)
-            } else if path.is_ident("u64") {
-                Some(ReprKind::U64)
-            } else if path.is_ident("u128") {
-                Some(ReprKind::U128)
-            } else {
-                // If other repr such as `transparent` or `C` have been found we
-                // are going to re-expand them into a new `#[repr(..)]` that is
-                // ignored by the rest of this macro.
+                    let repr_kind = if path.is_ident("u8") {
+                        Some(ReprKind::U8)
+                    } else if path.is_ident("u16") {
+                        Some(ReprKind::U16)
+                    } else if path.is_ident("u32") {
+                        Some(ReprKind::U32)
+                    } else if path.is_ident("u64") {
+                        Some(ReprKind::U64)
+                    } else if path.is_ident("u128") {
+                        Some(ReprKind::U128)
+                    } else {
+                        // If other repr such as `transparent` or `C` have been found we
+                        // are going to re-expand them into a new `#[repr(..)]` that is
+                        // ignored by the rest of this macro.
                         retained_reprs.push(path.clone().into());
-                None
-            };
-            if let Some(repr_kind) = repr_kind {
-                config.repr(repr_kind, path.span())?;
-            }
+                        None
+                    };
+                    if let Some(repr_kind) = repr_kind {
+                        config.repr(repr_kind, path.span())?;
+                    }
                 }
                 other => retained_reprs.push(other),
             }
@@ -231,5 +231,27 @@ impl BitfieldStruct {
             }
         }
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::ToTokens as _;
+
+    #[test]
+    fn retain_repr_arguments() {
+        let attr: syn::Attribute = syn::parse_quote!(#[repr(C, align(8))]);
+        let mut config = Config::default();
+
+        BitfieldStruct::extract_repr_attribute(&attr, &mut config).unwrap();
+
+        assert_eq!(config.retained_attributes.len(), 1);
+        let retained = &config.retained_attributes[0];
+        assert_eq!(
+            retained.to_token_stream().to_string(),
+            attr.to_token_stream().to_string(),
+            "repr arguments should be preserved when re-emitting retained repr attributes"
+        );
     }
 }
