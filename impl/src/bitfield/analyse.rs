@@ -5,7 +5,7 @@ use super::{
 };
 use core::convert::TryFrom;
 use quote::quote;
-use syn::{self, parse::Result, spanned::Spanned as _};
+use syn::{self, parse::Result, punctuated::Punctuated, spanned::Spanned as _};
 
 impl TryFrom<(&mut Config, syn::ItemStruct)> for BitfieldStruct {
     type Error = syn::Error;
@@ -52,31 +52,36 @@ impl BitfieldStruct {
     /// Extracts the `#[repr(uN)]` annotations from the given `#[bitfield]` struct.
     fn extract_repr_attribute(attr: &syn::Attribute, config: &mut Config) -> Result<()> {
         let list = attr.meta.require_list()?;
-        let mut retained_reprs = vec![];
-        attr.parse_nested_meta(|meta| {
-            let path = &meta.path;
-            let repr_kind = if path.is_ident("u8") {
-                Some(ReprKind::U8)
-            } else if path.is_ident("u16") {
-                Some(ReprKind::U16)
-            } else if path.is_ident("u32") {
-                Some(ReprKind::U32)
-            } else if path.is_ident("u64") {
-                Some(ReprKind::U64)
-            } else if path.is_ident("u128") {
-                Some(ReprKind::U128)
-            } else {
-                // If other repr such as `transparent` or `C` have been found we
-                // are going to re-expand them into a new `#[repr(..)]` that is
-                // ignored by the rest of this macro.
-                retained_reprs.push(path.clone());
-                None
-            };
-            if let Some(repr_kind) = repr_kind {
-                config.repr(repr_kind, path.span())?;
+        let repr_arguments: Punctuated<syn::Meta, syn::Token![,]> =
+            attr.parse_args_with(Punctuated::parse_terminated)?;
+        let mut retained_reprs = Vec::new();
+        for meta in repr_arguments {
+            match meta {
+                syn::Meta::Path(path) => {
+                    let repr_kind = if path.is_ident("u8") {
+                        Some(ReprKind::U8)
+                    } else if path.is_ident("u16") {
+                        Some(ReprKind::U16)
+                    } else if path.is_ident("u32") {
+                        Some(ReprKind::U32)
+                    } else if path.is_ident("u64") {
+                        Some(ReprKind::U64)
+                    } else if path.is_ident("u128") {
+                        Some(ReprKind::U128)
+                    } else {
+                        // If other repr such as `transparent` or `C` have been found we
+                        // are going to re-expand them into a new `#[repr(..)]` that is
+                        // ignored by the rest of this macro.
+                        retained_reprs.push(path.clone().into());
+                        None
+                    };
+                    if let Some(repr_kind) = repr_kind {
+                        config.repr(repr_kind, path.span())?;
+                    }
+                }
+                other => retained_reprs.push(other),
             }
-            Ok(())
-        })?;
+        }
         if !retained_reprs.is_empty() {
             // We only push back another re-generated `#[repr(..)]` if its contents
             // contained some non-bitfield representations and thus is not empty.
@@ -226,5 +231,27 @@ impl BitfieldStruct {
             }
         }
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::ToTokens as _;
+
+    #[test]
+    fn retain_repr_arguments() {
+        let attr: syn::Attribute = syn::parse_quote!(#[repr(C, align(8))]);
+        let mut config = Config::default();
+
+        BitfieldStruct::extract_repr_attribute(&attr, &mut config).unwrap();
+
+        assert_eq!(config.retained_attributes.len(), 1);
+        let retained = &config.retained_attributes[0];
+        assert_eq!(
+            retained.to_token_stream().to_string(),
+            attr.to_token_stream().to_string(),
+            "repr arguments should be preserved when re-emitting retained repr attributes"
+        );
     }
 }
