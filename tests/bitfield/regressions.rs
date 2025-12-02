@@ -85,3 +85,18 @@ fn regression_v0_11() {
     assert!(flags.b());
     assert_eq!(flags.into_bytes(), [0b0000_0101]);
 }
+
+#[test]
+fn regression_issue_132() {
+    #[repr(C, align(1024))]
+    #[bitfield]
+    pub struct PackedData {
+        header: B4,
+        body: B9,
+        is_alive: B1,
+        status: B2,
+    }
+
+    // check alignment of PackedData
+    assert_eq!(core::mem::align_of::<PackedData>(), 1024);
+}
