@@ -3,6 +3,8 @@ use crate::{
     Specifier,
 };
 
+use core::num::NonZero;
+
 impl Specifier for bool {
     const BITS: usize = 1;
     type Bytes = u8;
@@ -39,6 +41,41 @@ macro_rules! impl_specifier_for_primitive {
                 #[inline]
                 fn from_bytes(bytes: Self::Bytes) -> Result<Self::InOut, InvalidBitPattern<Self::Bytes>> {
                     Ok(bytes)
+                }
+            }
+
+            impl Specifier for NonZero<$prim> {
+                const BITS: usize = $bits;
+                type Bytes = $prim;
+                type InOut = NonZero<$prim>;
+
+                #[inline]
+                fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds> {
+                    Ok(input.get())
+                }
+
+                #[inline]
+                fn from_bytes(bytes: Self::Bytes) -> Result<Self::InOut, InvalidBitPattern<Self::Bytes>> {
+                    NonZero::<$prim>::new(bytes).ok_or_else(|| InvalidBitPattern { invalid_bytes: bytes })
+                }
+            }
+
+            impl Specifier for Option<NonZero<$prim>> {
+                const BITS: usize = $bits;
+                type Bytes = $prim;
+                type InOut = Option<NonZero<$prim>>;
+
+                #[inline]
+                fn into_bytes(input: Self::InOut) -> Result<Self::Bytes, OutOfBounds> {
+                    match input {
+                        Some(x) => Ok(x.get()),
+                        None => Ok(0),
+                    }
+                }
+
+                #[inline]
+                fn from_bytes(bytes: Self::Bytes) -> Result<Self::InOut, InvalidBitPattern<Self::Bytes>> {
+                    Ok(NonZero::<$prim>::new(bytes))
                 }
             }
         )*
