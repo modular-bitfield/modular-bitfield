@@ -1,11 +1,15 @@
 error[E0277]: the trait bound `BitCount<32>: IsU16Compatible` is not satisfied
  --> tests/ui/repr/invalid_repr_width_1.rs:4:8
   |
-4 | #[repr(u16)] // Too few bits!
-  |        ^^^ the trait `IsU16Compatible` is not implemented for `BitCount<32>`
-  |
-  = help: the trait `IsU16Compatible` is implemented for `BitCount<16>`
-  = help: see issue #48214
+ 4 | #[repr(u16)] // Too few bits!
+   |        ^^^ the trait `IsU16Compatible` is not implemented for `BitCount<32>`
+   |
+help: the trait `IsU16Compatible` is implemented for `BitCount<16>`
+  --> src/private/traits.rs
+   |
+   | impl IsU16Compatible for checks::BitCount<16> {}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: see issue #48214
 
 error[E0308]: mismatched types
  --> tests/ui/repr/invalid_repr_width_1.rs:4:8
