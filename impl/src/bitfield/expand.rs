@@ -833,7 +833,7 @@ impl BitfieldStruct {
     ) -> TokenStream2 {
         let span = self.item_struct.span();
 
-        let mut bit_manipulations = Vec::new();
+        let mut defaults = Vec::new();
         let mut current_offset = quote_spanned!(span=> 0usize);
 
         for info in self.field_infos(config) {
@@ -871,9 +871,9 @@ impl BitfieldStruct {
                     };
 
                     if bits_in_this_byte == 8 && bit_pos == 0 {
-                        bytes[byte_idx] = (value & 0xFF) as u8;
+                        bytes[byte_idx] = value as u8;
                     } else {
-                        let byte_value = ((value & 0xFF) as u8) << bit_pos;
+                        let byte_value = (value as u8) << bit_pos;
                         bytes[byte_idx] |= byte_value;
                     }
 
@@ -884,21 +884,17 @@ impl BitfieldStruct {
                 }
             );
 
-            bit_manipulations.push(bit_manipulation);
+            defaults.push(bit_manipulation);
             current_offset = quote_spanned!(span=> #current_offset + #field_bits);
         }
 
-        if bit_manipulations.is_empty() {
-            quote_spanned!(span=> [0u8; #byte_count])
-        } else {
-            quote_spanned!(span=> {
-                #[allow(clippy::semicolon_if_nothing_returned)]
-                {
-                    let mut bytes = [0u8; #byte_count];
-                    #( #bit_manipulations )*
-                    bytes
-                }
-            })
-        }
+        quote_spanned!(span=> {
+            #[allow(clippy::semicolon_if_nothing_returned)]
+            {
+                let mut bytes = [0u8; #byte_count];
+                #( #defaults )*
+                bytes
+            }
+        })
     }
 }
