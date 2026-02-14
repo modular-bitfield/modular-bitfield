@@ -2,7 +2,7 @@ use super::{config::ConfigValue, raise_skip_error};
 use crate::errors::CombineError;
 use proc_macro2::Span;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct FieldConfig {
     /// Attributes that are re-expanded and going to be ignored by the rest of the `#[bitfield]` invocation.
     pub retained_attrs: Vec<syn::Attribute>,
@@ -10,6 +10,8 @@ pub struct FieldConfig {
     pub bits: Option<ConfigValue<usize>>,
     /// An encountered `#[skip]` attribute on a field.
     pub skip: Option<ConfigValue<SkipWhich>>,
+    /// An encountered `#[default(...)]` attribute on a field.
+    pub default: Option<ConfigValue<syn::Expr>>,
 }
 
 /// Controls which parts of the code generation to skip.
@@ -48,9 +50,42 @@ impl SkipWhich {
 }
 
 impl FieldConfig {
+    pub fn new() -> Self {
+        Self {
+            retained_attrs: Vec::new(),
+            bits: None,
+            skip: None,
+            default: None,
+        }
+    }
+
     /// Registers the given attribute to be re-expanded and further ignored.
     pub fn retain_attr(&mut self, attr: syn::Attribute) {
         self.retained_attrs.push(attr);
+    }
+
+    /// Generic helper for setting config values that ensures no duplicates.
+    fn set_config<T>(
+        name: &str,
+        config: &mut Option<ConfigValue<T>>,
+        value: T,
+        span: Span,
+    ) -> Result<(), syn::Error> {
+        if let Some(ref previous) = config {
+            Err(format_err!(
+                span,
+                "encountered duplicate `#[{} = ...]` attribute for field",
+                name
+            )
+            .into_combine(format_err!(
+                previous.span,
+                "duplicate `#[{} = ...]` here",
+                name
+            )))
+        } else {
+            *config = Some(ConfigValue { value, span });
+            Ok(())
+        }
     }
 
     /// Sets the `#[bits = N]` if found for a `#[bitfield]` annotated field.
@@ -59,22 +94,7 @@ impl FieldConfig {
     ///
     /// If previously already registered a `#[bits = N]`.
     pub fn bits(&mut self, amount: usize, span: Span) -> Result<(), syn::Error> {
-        match self.bits {
-            Some(ref previous) => {
-                return Err(format_err!(
-                    span,
-                    "encountered duplicate `#[bits = N]` attribute for field"
-                )
-                .into_combine(format_err!(previous.span, "duplicate `#[bits = N]` here")))
-            }
-            None => {
-                self.bits = Some(ConfigValue {
-                    value: amount,
-                    span,
-                });
-            }
-        }
-        Ok(())
+        Self::set_config("bits", &mut self.bits, amount, span)
     }
 
     /// Sets the `#[skip(which)]` if found for a `#[bitfield]` annotated field.
@@ -120,17 +140,28 @@ impl FieldConfig {
         Ok(())
     }
 
-    /// Returns `true` if the config demands that code generation for setters should be skipped.
-    pub fn skip_setters(&self) -> bool {
+    /// Returns the span of the skip attribute if the config demands that code generation for setters should be skipped.
+    pub fn skip_setters(&self) -> Option<&Span> {
         self.skip
             .as_ref()
-            .is_some_and(|config| SkipWhich::skip_setters(config.value))
+            .filter(|config| SkipWhich::skip_setters(config.value))
+            .map(|config| &config.span)
     }
 
-    /// Returns `true` if the config demands that code generation for getters should be skipped.
-    pub fn skip_getters(&self) -> bool {
+    /// Returns the span of the skip attribute if the config demands that code generation for getters should be skipped.
+    pub fn skip_getters(&self) -> Option<&Span> {
         self.skip
             .as_ref()
-            .is_some_and(|config| SkipWhich::skip_getters(config.value))
+            .filter(|config| SkipWhich::skip_getters(config.value))
+            .map(|config| &config.span)
+    }
+
+    /// Sets the `#[default = ...]` if found for a `#[bitfield]` annotated field.
+    ///
+    /// # Errors
+    ///
+    /// If previously already registered a `#[default = ...]`.
+    pub fn default(&mut self, value: syn::Expr, span: Span) -> Result<(), syn::Error> {
+        Self::set_config("default", &mut self.default, value, span)
     }
 }

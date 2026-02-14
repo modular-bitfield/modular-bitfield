@@ -37,6 +37,7 @@ fn generate_specifier_for(bits: usize) -> TokenStream2 {
 
         impl crate::Specifier for #ident {
             const BITS: usize = #bits;
+            const DEFAULT: Self::Bytes = 0;
             type Bytes = #in_out;
             type InOut = #in_out;
 
