@@ -117,3 +117,37 @@ where
         }
     }
 }
+
+#[doc(hidden)]
+#[inline]
+#[must_use]
+pub const fn set_bits_in_bytes<const N: usize>(
+    mut bytes: [u8; N],
+    offset: usize,
+    value: u128,
+    bits: usize,
+) -> [u8; N] {
+    let mut remaining_bits = bits;
+    let mut value = value;
+    let mut byte_idx = offset / 8;
+    let mut bit_pos = offset % 8;
+    while remaining_bits > 0 {
+        let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
+            remaining_bits
+        } else {
+            8 - bit_pos
+        };
+
+        #[allow(clippy::cast_possible_truncation)]
+        if bits_in_this_byte == 8 && bit_pos == 0 {
+            bytes[byte_idx] = value as u8;
+        } else {
+            bytes[byte_idx] |= (value as u8) << bit_pos;
+        }
+        value >>= bits_in_this_byte;
+        remaining_bits -= bits_in_this_byte;
+        byte_idx += 1;
+        bit_pos = 0;
+    }
+    bytes
+}

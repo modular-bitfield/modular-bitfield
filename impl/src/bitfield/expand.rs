@@ -852,49 +852,24 @@ impl BitfieldStruct {
                 quote_spanned!(span=> <#field_type as ::modular_bitfield::Specifier>::DEFAULT)
             };
 
-            let bit_manipulation = quote_spanned!(span=>
-                let field_offset = #current_offset;
-                let field_value = #const_value;
-                let field_bits = #field_bits;
-
-                let mut remaining_bits = field_bits;
-                #[allow(clippy::unnecessary_cast)]
-                let mut value = field_value as u128;
-                let mut byte_idx = field_offset / 8;
-                let mut bit_pos = field_offset % 8;
-
-                while remaining_bits > 0 {
-                    let bits_in_this_byte = if bit_pos + remaining_bits <= 8 {
-                        remaining_bits
-                    } else {
-                        8 - bit_pos
-                    };
-
-                    if bits_in_this_byte == 8 && bit_pos == 0 {
-                        bytes[byte_idx] = value as u8;
-                    } else {
-                        let byte_value = (value as u8) << bit_pos;
-                        bytes[byte_idx] |= byte_value;
-                    }
-
-                    value >>= bits_in_this_byte;
-                    remaining_bits -= bits_in_this_byte;
-                    byte_idx += 1;
-                    bit_pos = 0;
-                }
+            let default_call = quote_spanned!(span=>
+                #[allow(clippy::identity_op, clippy::unnecessary_cast)]
+                let bytes = ::modular_bitfield::private::set_bits_in_bytes(
+                    bytes,
+                    #current_offset,
+                    #const_value as u128,
+                    #field_bits,
+                );
             );
 
-            defaults.push(bit_manipulation);
+            defaults.push(default_call);
             current_offset = quote_spanned!(span=> #current_offset + #field_bits);
         }
 
         quote_spanned!(span=> {
-            #[allow(clippy::semicolon_if_nothing_returned)]
-            {
-                let mut bytes = [0u8; #byte_count];
-                #( #defaults )*
-                bytes
-            }
+            let bytes = [0u8; #byte_count];
+            #( #defaults )*
+            bytes
         })
     }
 }
