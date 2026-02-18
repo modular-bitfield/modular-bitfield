@@ -1,0 +1,11 @@
+error: encountered duplicate `#[derive(Default)]` parameter
+ --> tests/ui/derive_default/duplicate_derive_default.rs:5:10
+  |
+5 | #[derive(Default)]
+  |          ^^^^^^^
+
+error: previous `#[derive(Default)]` parameter here
+ --> tests/ui/derive_default/duplicate_derive_default.rs:4:10
+  |
+4 | #[derive(Default)]
+  |          ^^^^^^^

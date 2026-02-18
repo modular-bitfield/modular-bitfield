@@ -41,6 +41,12 @@ pub trait Specifier {
     /// The number of bits used by the `Specifier`.
     const BITS: usize;
 
+    /// The default value for this specifier type.
+    ///
+    /// This is used when constructing parent bitfields to properly initialize
+    /// fields that have their own defaults.
+    const DEFAULT: Self::Bytes;
+
     /// The storage type. This is typically the smallest integer primitive that
     /// can store all possible values of the [`InOut`](Self::InOut) type.
     type Bytes;

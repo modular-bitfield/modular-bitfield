@@ -5,6 +5,7 @@ use crate::{
 
 impl Specifier for bool {
     const BITS: usize = 1;
+    const DEFAULT: Self::Bytes = 0;
     type Bytes = u8;
     type InOut = bool;
 
@@ -28,6 +29,7 @@ macro_rules! impl_specifier_for_primitive {
         $(
             impl Specifier for $prim {
                 const BITS: usize = $bits;
+                const DEFAULT: Self::Bytes = 0;
                 type Bytes = $prim;
                 type InOut = $prim;
 

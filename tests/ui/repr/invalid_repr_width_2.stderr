@@ -4,7 +4,11 @@ error[E0277]: the trait bound `BitCount<32>: IsU64Compatible` is not satisfied
 4 | #[repr(u64)] // Too many bits!
   |        ^^^ the trait `IsU64Compatible` is not implemented for `BitCount<32>`
   |
-  = help: the trait `IsU64Compatible` is implemented for `BitCount<64>`
+help: the trait `IsU64Compatible` is implemented for `BitCount<64>`
+ --> src/private/traits.rs
+  |
+  | impl IsU64Compatible for checks::BitCount<64> {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   = help: see issue #48214
 
 error[E0308]: mismatched types
