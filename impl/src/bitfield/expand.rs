@@ -834,7 +834,7 @@ impl BitfieldStruct {
         let span = self.item_struct.span();
 
         let mut defaults = Vec::new();
-        let mut current_offset = quote_spanned!(span=> 0usize);
+        let mut offset = Punctuated::<syn::Expr, Token![+]>::new();
 
         for info in self.field_infos(config) {
             let field_type = &info.field.ty;
@@ -852,6 +852,12 @@ impl BitfieldStruct {
                 quote_spanned!(span=> <#field_type as ::modular_bitfield::Specifier>::DEFAULT)
             };
 
+            let current_offset = if offset.is_empty() {
+                quote_spanned!(span=> 0usize)
+            } else {
+                offset.to_token_stream()
+            };
+
             let default_call = quote_spanned!(span=>
                 #[allow(clippy::identity_op, clippy::unnecessary_cast)]
                 let bytes = ::modular_bitfield::private::set_bits_in_bytes(
@@ -863,7 +869,9 @@ impl BitfieldStruct {
             );
 
             defaults.push(default_call);
-            current_offset = quote_spanned!(span=> #current_offset + #field_bits);
+            offset.push(syn::parse_quote_spanned!(span=>
+                <#field_type as ::modular_bitfield::Specifier>::BITS
+            ));
         }
 
         quote_spanned!(span=> {
